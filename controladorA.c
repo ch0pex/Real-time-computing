@@ -1,5 +1,5 @@
 //-Uncomment to compile with arduino support
-#define ARDUINO
+//#define ARDUINO
 
 //-------------------------------------
 //-  Include files
@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include <rtems.h>
 #include <rtems/termiostypes.h>
@@ -26,6 +27,7 @@
 //-  Constants
 //-------------------------------------
 #define MSG_LEN 9 //8?
+#define CICLO_SEC 10.0
 //#define SLAVE_ADDR 0x8
 
 //-------------------------------------
@@ -36,7 +38,9 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
+
 struct timespec time_msg = {0,400000000};
+
 int fd_serie = -1;
 
 //-------------------------------------
@@ -296,15 +300,35 @@ int task_mixer()
 //-------------------------------------
 void *controller(void *arg)
 {
-    
+    static clock_t tiempo_inicio, tiempo_final;
+    static double tiempo;
+    static struct timespec seg_sleep = {0,0};
+    static int seg=0;
+    static int nseg=0;
     while(1) {
         // calling task of speed
-        task_speed();
-        task_brake();
-        task_gas();
-        task_mixer();
+        for(int i=0;i<3;i++){
+            tiempo_inicio = clock();
+
+            task_slope();
+            task_speed();
+            task_gas();
+            task_brake();
+            if (i==0 || i==2){
+                task_mixer();
+            } 
+            tiempo_final = clock();
+            difference = time_cycle - time_cycle_fin;
+
+            tiempo = CICLO_SEC - (double)(tiempo_final - tiempo_inicio) / CLOCKS_PER_SEC; /*según que estes midiendo el tiempo en segundos es demasiado grande*/
+            seg = (int)tiempo;
+            nseg =(int)(1000000000*(tiempo - seg));
+            seg_sleep = {seg,nseg};
+            nanosleep(&seg_sleep, NULL);
+           
+    }
         // calling task of slope
-        task_slope();
+        
     }
 }
 
