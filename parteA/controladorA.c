@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -21,13 +22,14 @@
 #include <rtems/termiostypes.h>
 #include <bsp.h>
 
-#include "displayB.h"
+#include "displayA.h"
 
 //-------------------------------------
 //-  Constants
 //-------------------------------------
 #define MSG_LEN 9 //8?
 #define CICLO_SEC 10.0
+#define NS_PER_S  1000000000
 //#define SLAVE_ADDR 0x8
 
 //-------------------------------------
@@ -90,7 +92,7 @@ int read_msg(int fd, char *buffer, int max_size)
 // ------------------------------------
 //---------TIme operations-------------
 //-------------------------------------
-double getClock()
+double get_Clock()
 {
     struct timespec tp;
     double reloj;
@@ -186,7 +188,7 @@ int task_speed()
 #endif
 
     // display speed
-    if (1 == sscanf (answer, "SPD:%f\n", &speed)){
+    if (1 == sscanf (answer, "SPD:%lf\n", &speed)){
         displaySpeed(speed);
     }
     return 0;
@@ -321,12 +323,12 @@ int task_mixer()
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
 
-    time = getClock();
+    time = get_Clock();
     if (timeMix != -1){
         timeMix +=  time - oldTime; 
     }
     oldTime = time;
-    if (timeMix > 30 || timeMix == -1 && mix == false){
+    if ((timeMix > 30 || timeMix == -1) && mix == false){
         //girar mezclador
         strcpy(request, "MIX: SET\n");     
     }
@@ -384,10 +386,10 @@ void plan1(){
         time_diff(cs_time,diff_time, &diff_time);
 
         if(time_comp(cs_time,diff_time) == -1){
-            print("Error");
+            printf("Error");
             exit(-1);
         }
-        nanosleep(&sleep_time, NULL);
+        nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }
 }
