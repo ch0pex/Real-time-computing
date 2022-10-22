@@ -21,7 +21,7 @@
 #include <rtems/termiostypes.h>
 #include <bsp.h>
 
-#include "displayA.h"
+#include "displayB.h"
 
 //-------------------------------------
 //-  Constants
@@ -38,6 +38,7 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
+int lit = 0.0; 
 
 struct timespec time_msg = {0,400000000};
 
@@ -155,8 +156,6 @@ int time_comp(struct timespec t1,
 }
 
 
-
-
 //-------------------------------------
 //-  Function: task_speed
 //-------------------------------------
@@ -261,7 +260,7 @@ int task_brake()
     }
     //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
-        brake = false ? brake : true;
+        brake = brake ? false : true;
         displayBrake(brake);
     }
     return 0; 
@@ -302,12 +301,13 @@ int task_gas()
     }
     //
     if (0 == strcmp(answer, "GAS:  OK\n")) {
-        gas = false ? gas : true;
-        displayBrake(gas);
+        gas = gas ? false : true;
+        displayGas(gas);
     }
     return 0; 
     //displayGas(int gas);
 }
+
 
 //-------------------------------------
 // A partir de los datos recibidos determina si girar o no el mezclador ()
@@ -321,24 +321,17 @@ int task_mixer()
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
 
-    time = getclock();
+    time = getClock();
     if (timeMix != -1){
         timeMix +=  time - oldTime; 
     }
     oldTime = time;
-
-
     if (timeMix > 30 || timeMix == -1 && mix == false){
         //girar mezclador
-        timeMix = 0;
-        mix = true; 
-        strcpy(request, "MIX: SET\n");
-        
+        strcpy(request, "MIX: SET\n");     
     }
     else if( timeMix > 30 && mix == true){
-        //parar mezclador
-        timeMix = 0;
-        mix = false;
+        //parar mezclador        
         strcpy(request, "MIX: CLR\n");
     }
 
@@ -356,13 +349,16 @@ int task_mixer()
     }
     //
     if (0 == strcmp(answer, "MIX:  OK\n")) {
-        mix = false ? mix : true;
-        displayBrake(mix);
+        timeMix = 0;
+        mix = mix ? false : true;
+        displayMix(mix);
     }
     return 0; 
 
     //displayMix(int mixer);
 }
+
+
 
 
 void plan1(){
@@ -372,7 +368,7 @@ void plan1(){
     struct timespec end_time;
     struct timespec diff_time;
     int cs = 0; 
-    clock_gettime(CLOCK_REALTIME, &start_time)
+    clock_gettime(CLOCK_REALTIME, &start_time);
     while(1){
         task_slope();
         task_speed();
@@ -382,7 +378,7 @@ void plan1(){
             task_mixer();
         }
 
-        cs = (cs + 1) % 3
+        cs = (cs + 1) % 3;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
