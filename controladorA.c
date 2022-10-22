@@ -86,6 +86,77 @@ int read_msg(int fd, char *buffer, int max_size)
     return 0;
 }
 
+// ------------------------------------
+//---------TIme operations-------------
+//-------------------------------------
+double getClock()
+{
+    struct timespec tp;
+    double reloj;
+    
+    clock_gettime (CLOCK_REALTIME, &tp);
+    reloj = ((double)tp.tv_sec) +
+    ((double)tp.tv_nsec) / ((double)NS_PER_S);
+    //printf ("%d:%d",tp.tv_sec,tp.tv_nsec);
+    
+    return (reloj);
+}
+
+/************************************
+ *  Function: diffTime
+ ************************************/
+void time_diff(struct timespec end, 
+              struct timespec start,
+              struct timespec *diff)
+{
+    if (end.tv_nsec < start.tv_nsec) {
+        diff->tv_nsec = NS_PER_S - start.tv_nsec + end.tv_nsec;
+        diff->tv_sec = end.tv_sec - (start.tv_sec+1);
+    } else {
+        diff->tv_nsec = end.tv_nsec - start.tv_nsec;
+        diff->tv_sec = end.tv_sec - start.tv_sec;
+    }
+}
+
+/***********************************
+ *  Function: addTime
+ ***********************************/
+void time_add(struct timespec end, 
+             struct timespec start,
+             struct timespec *add)
+{
+    unsigned long aux;
+    aux = start.tv_nsec + end.tv_nsec;
+    add->tv_sec = start.tv_sec + end.tv_sec +
+    (aux / NS_PER_S);
+    add->tv_nsec = aux % NS_PER_S;
+}
+
+/*************************************
+ *  Function: compTime
+ *************************************/
+int time_comp(struct timespec t1, 
+             struct timespec t2)
+{
+    if (t1.tv_sec == t2.tv_sec) {
+        if (t1.tv_nsec == t2.tv_nsec) {
+            return (0);
+        } else if (t1.tv_nsec > t2.tv_nsec) {
+            return (1);
+        } else if (t1.tv_nsec < t2.tv_nsec) {
+            return (-1);
+        }
+    } else if (t1.tv_sec > t2.tv_sec) {
+        return (1);
+    } else if (t1.tv_sec < t2.tv_sec) {
+        return (-1);
+    }
+    return (0);
+}
+
+
+
+
 //-------------------------------------
 //-  Function: task_speed
 //-------------------------------------
@@ -133,7 +204,6 @@ int task_slope()
     //--------------------------------
     //  request slope and display it
     //--------------------------------
-
     //clear request and answer
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
@@ -309,19 +379,20 @@ void plan1(){
         task_gas();
         task_brake();
         if (cs == 1 || cs == 2){
-            task_mixer()
+            task_mixer();
         }
+
         cs = (cs + 1) % 3
-        //copiar funciones de tiempo y cambiar nombres
         clock_gettime(CLOCK_REALTIME, &end_time);
-        diff_time(end_time,start_time, &diff_time);
-        diff_time(cs_time,diff_time, &diff_time);
-        if(compTime(cs_time,diff_time) == -1){
+        time_diff(end_time,start_time, &diff_time);
+        time_diff(cs_time,diff_time, &diff_time);
+
+        if(time_comp(cs_time,diff_time) == -1){
             print("Error");
             exit(-1);
         }
         nanosleep(&sleep_time, NULL);
-        addTime(start_time,cs_time, &start_time)
+        time_add(start_time,cs_time, &start_time);
     }
 }
 
@@ -333,17 +404,7 @@ void *controller(void *arg)
 {
 
     while(1) {
-        plan1()
-           
-    }
-
-    //int plan = 0
-    //while(1):
-        
-
-
-        // calling task of slope
-        
+        plan1();      
     }
 }
 
