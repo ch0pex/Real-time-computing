@@ -295,38 +295,53 @@ int task_mixer()
 }
 
 
+void plan1(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {10,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0; 
+    clock_gettime(CLOCK_REALTIME, &start_time)
+    while(1){
+        task_slope();
+        task_speed();
+        task_gas();
+        task_brake();
+        if (cs == 1 || cs == 2){
+            task_mixer()
+        }
+        cs = (cs + 1) % 3
+        //copiar funciones de tiempo y cambiar nombres
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        diff_time(end_time,start_time, &diff_time);
+        diff_time(cs_time,diff_time, &diff_time);
+        if(compTime(cs_time,diff_time) == -1){
+            print("Error");
+            exit(-1);
+        }
+        nanosleep(&sleep_time, NULL);
+        addTime(start_time,cs_time, &start_time)
+    }
+}
+
+
 //-------------------------------------
 //-  Function: controller
 //-------------------------------------
 void *controller(void *arg)
 {
-    static clock_t tiempo_inicio, tiempo_final;
-    static double tiempo;
-    static struct timespec seg_sleep = {0,0};
-    static int seg=0;
-    static int nseg=0;
+
     while(1) {
-        // calling task of speed
-        for(int i=0;i<3;i++){
-            tiempo_inicio = clock();
-
-            task_slope();
-            task_speed();
-            task_gas();
-            task_brake();
-            if (i==0 || i==2){
-                task_mixer();
-            } 
-            tiempo_final = clock();
-            difference = time_cycle - time_cycle_fin;
-
-            tiempo = CICLO_SEC - (double)(tiempo_final - tiempo_inicio) / CLOCKS_PER_SEC; /*según que estes midiendo el tiempo en segundos es demasiado grande*/
-            seg = (int)tiempo;
-            nseg =(int)(1000000000*(tiempo - seg));
-            seg_sleep = {seg,nseg};
-            nanosleep(&seg_sleep, NULL);
+        plan1()
            
     }
+
+    //int plan = 0
+    //while(1):
+        
+
+
         // calling task of slope
         
     }
