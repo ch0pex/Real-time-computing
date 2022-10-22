@@ -10,7 +10,12 @@
 // --------------------------------------
 
 #define MESSAGE_SIZE 8
-
+#define pin_gas 13 
+#define pin_brake 12
+#define pin_mix 11 
+#define pin_speed 10
+#define pin_switch_1 8
+#define pin_switch_2 9
 // --------------------------------------
 // Global Variables
 // --------------------------------------
@@ -20,11 +25,6 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
-int pin_gas = 13; 
-int pin_brake = 12; 
-int pin_mix = 11;
-// int pin swtich = 8 or 9; 
-int pin_speed = 10; 
 bool request_received = false;
 bool requested_answered = false;
 char request[MESSAGE_SIZE+1];
@@ -106,24 +106,11 @@ int speed_req()
    return 0;
 }
 
-double calc_speed(){
-   /*
-   double oldtime = 0;
-   double time;
-   double difftime;
 
-   if (old_time == 0.0) {
-        old_time = getClock();;
-    }
-   time = getclock();
-   difftime = time - oldtime;
-   */
-   accel = 0;
-   accel += 0.5 ? gas : 0; 
-   accel -= 0.5 ? brake : 0;
-   accel += 0.25 ? slope == -1 : 0;
-   accel -= 0.25 ? slope == 1 : 0;
+double calc_speed(){
+   accel = gas * 0.5 - brake * 0.5 + 0.25 * -slope;
    speed += accel * 0.2;
+   analogWrite(pin_speed, map(speed, 40, 70, 0, 255));
    return speed; 
 }
 
@@ -136,7 +123,18 @@ int slope_req(){
    // Periodo de 10s
    // Cuesta arriba aceleracion - 0.25
    // Cuesta abajo aceleracion + 0.25
-
+   if (request_received && !requested_answered && 0 == strcmp("SLP: REQ\n",request)){
+      if(digitalRead(pin_switch_1)){
+         sprintf(answer,"SLP:DOWN\n");       
+      }
+      else if(digitalRead(pin_switch_2)){
+         sprintf(answer,"SLP:  UP\n");
+      }
+      else{
+         sprintf(answer,"SLP:FLAT\n");
+      }
+      requested_answered = true;
+   }
 
 
 }
@@ -181,8 +179,6 @@ int gas_req(){
 }
 
 
-
-
 // --------------------------------------
 // Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
 //--------------------------------------
@@ -215,7 +211,8 @@ void setup()
    pinmode(pin_brake, OUTPUT);
    pinmode(pin_mix, OUTPUT);
    pinmode(pin_speed, OUTPUT);
-   //pinmode(pin_switch, INPUT);
+   pinmode(pin_switch_1, INPUT);
+   pinmode(pin_switch_2, INPUT);
 }
 
 // --------------------------------------
@@ -232,12 +229,13 @@ void loop()
    mix_req();
    calc_speed();
    time_end = millis();
-   if (time_start > time_sleep){
+   if (time_start >= time_end){
      time_sleep = 200 - MAX_TIME - time_start + time_end;
    }
    else{
      time_sleep = 200 - time_end - time_start;
    }
+
    if(time_sleep > 10){
      delay(time_sleep);
    }
@@ -245,6 +243,8 @@ void loop()
      delayMicroseconds(time_sleep);
    }
    else {
-     
-   
+      Serial.print("MSG: ERR\n");
+      exit(-1);
+   }
+   time_start += 200; 
 }
