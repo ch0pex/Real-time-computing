@@ -29,7 +29,10 @@ bool request_received = false;
 bool requested_answered = false;
 char request[MESSAGE_SIZE+1];
 char answer[MESSAGE_SIZE+1];
-
+unsigned long time_start; 
+unsigned long time_end; 
+unsigned long time_sleep; 
+unsigned long MAX_TIME = (unsigned long) -1;
 // --------------------------------------
 // Function: comm_server
 // --------------------------------------
@@ -220,6 +223,28 @@ void setup()
 // --------------------------------------
 void loop()
 {
+   if (time_start == null){
+     time_start = millis();
+   }
    comm_server();
    speed_req();
+   brake_req();
+   mix_req();
+   calc_speed();
+   time_end = millis();
+   if (time_start > time_sleep){
+     time_sleep = 200 - MAX_TIME - time_start + time_end;
+   }
+   else{
+     time_sleep = 200 - time_end - time_start;
+   }
+   if(time_sleep > 10){
+     delay(time_sleep);
+   }
+   else if(time_sleep >= 10 && time_sleep <= 0){
+     delayMicroseconds(time_sleep);
+   }
+   else {
+     
+   
 }
