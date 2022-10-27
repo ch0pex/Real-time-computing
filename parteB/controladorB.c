@@ -1,3 +1,4 @@
+
 //-Uncomment to compile with arduino support
 //#define ARDUINO
 
@@ -9,6 +10,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -21,13 +23,14 @@
 #include <rtems/termiostypes.h>
 #include <bsp.h>
 
-#include "displayB.h"
+#include "displayA.h"
 
 //-------------------------------------
 //-  Constants
 //-------------------------------------
 #define MSG_LEN 9 //8?
 #define CICLO_SEC 10.0
+#define NS_PER_S  1000000000
 //#define SLAVE_ADDR 0x8
 
 //-------------------------------------
@@ -38,7 +41,8 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
-int lit = 0.0; 
+int lit = 0.0;
+bool lam = false;  
 
 struct timespec time_msg = {0,400000000};
 
@@ -90,7 +94,7 @@ int read_msg(int fd, char *buffer, int max_size)
 // ------------------------------------
 //---------TIme operations-------------
 //-------------------------------------
-double getClock()
+double get_Clock()
 {
     struct timespec tp;
     double reloj;
@@ -186,39 +190,11 @@ int task_speed()
 #endif
 
     // display speed
-    if (1 == sscanf (answer, "SPD:%f\n", &speed)){
+    if (1 == sscanf (answer, "SPD:%lf\n", &speed)){
         displaySpeed(speed);
     }
     return 0;
 }
-
-int task_lit()
-{
-    char request[MSG_LEN+1];
-    char answer[MSG_LEN+1];
-    memset(request, '\0', MSG_LEN+1);
-    memset(answer, '\0', MSG_LEN+1);
-    strcpy(request,"LIT: REQ\n")
-    
-#if defined(ARDUINO)
-    // use UART serial module
-    write(fd_serie, request, MSG_LEN);
-    nanosleep(&time_msg, NULL);
-    read_msg(fd_serie, answer, MSG_LEN);
-#else
-    //Use the simulator
-    simulator(request, answer);
-#endif
-
-    // display speed
-    if (1 == sscanf (answer, "LIT:%f%\n", &lit)){
-        displayLightSensor(lit);
-    }
-    return 0;
-
-}
-
-
 
 //-------------------------------------
 //-  Function: task_slope
@@ -288,7 +264,7 @@ int task_brake()
     }
     //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
-        brake = brake ? false : true;
+        brake = !brake;
         displayBrake(brake);
     }
     return 0; 
@@ -329,7 +305,7 @@ int task_gas()
     }
     //
     if (0 == strcmp(answer, "GAS:  OK\n")) {
-        gas = gas ? false : true;
+        gas = !gas;
         displayGas(gas);
     }
     return 0; 
@@ -349,17 +325,14 @@ int task_mixer()
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
 
-    time = getClock();
+    time = get_Clock();
     if (timeMix != -1){
         timeMix +=  time - oldTime; 
     }
     oldTime = time;
-
-
-    if (timeMix > 30 || timeMix == -1 && mix == false){
+    if ((timeMix > 30 || timeMix == -1) && mix == false){
         //girar mezclador
-        strcpy(request, "MIX: SET\n");
-        
+        strcpy(request, "MIX: SET\n");     
     }
     else if( timeMix > 30 && mix == true){
         //parar mezclador        
@@ -381,7 +354,7 @@ int task_mixer()
     //
     if (0 == strcmp(answer, "MIX:  OK\n")) {
         timeMix = 0;
-        mix = mix ? false : true;
+        mix = !mix;
         displayMix(mix);
     }
     return 0; 
@@ -389,6 +362,56 @@ int task_mixer()
     //displayMix(int mixer);
 }
 
+
+int task_lit()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    strcpy(request,"LIT: REQ\n")
+    
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+
+    // display speed
+    if (1 == sscanf (answer, "LIT:%f%\n", &lit)){
+        displayLightSensor(lit);
+    }
+    return 0;
+
+}
+
+int task_lamp(){
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    strcpy(request,"LAM: REQ\n")
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+    // display slope
+    if (0 == strcmp(answer, "LAM:  OK\n")){
+        lam = !lam
+        displaySlope(lam);
+    } 
+    return 0;
+
+}
 
 
 
@@ -415,10 +438,10 @@ void plan1(){
         time_diff(cs_time,diff_time, &diff_time);
 
         if(time_comp(cs_time,diff_time) == -1){
-            print("Error");
+            printf("Error");
             exit(-1);
         }
-        nanosleep(&sleep_time, NULL);
+        nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }
 }
