@@ -5,24 +5,20 @@
 #include <stdio.h>
 #include <Wire.h>
 
+
 // --------------------------------------
 // Global Constants
 // --------------------------------------
 
 #define MESSAGE_SIZE 8
-#define pin_gas 13 
-#define pin_brake 12
-#define pin_mix 11 
-#define pin_speed 10
-#define pin_switch_1 8
-#define pin_switch_2 9
+
 // --------------------------------------
 // Global Variables
 // --------------------------------------
-double speed = 55.0;
+double speed2 = 55.0;
 double accel = 0.0;; 
-bool brake = false;
-bool gas = false; 
+int brake = 0;
+int gas = 0; 
 bool mix = false; 
 int slope = 0;
 bool request_received = false;
@@ -33,6 +29,12 @@ unsigned long time_start;
 unsigned long time_end; 
 unsigned long time_sleep; 
 unsigned long MAX_TIME = (unsigned long) -1;
+int pin_gas = 13 ;
+int pin_brake = 12;
+int pin_mix = 11;
+int pin_speed = 10;
+int pin_switch_1 = 9;
+int pin_switch_2 = 8;
 // --------------------------------------
 // Function: comm_server
 // --------------------------------------
@@ -93,12 +95,12 @@ int comm_server()
 int speed_req()
 {
    // Calculo de la velocidad
-   speed = calc_speed();
+   speed2 = calc_speed();
    // If there is a request not answered, check if this is the one
    if ( request_received && !requested_answered && (0 == strcmp("SPD: REQ\n",request)) ) {
       // send the answer for speed request
       char num_str[5];
-      dtostrf(speed,4,1,num_str);
+      dtostrf(speed2,4,1,num_str);
       sprintf(answer,"SPD:%s\n",num_str);
       // set request as answered
       requested_answered = true;
@@ -108,10 +110,11 @@ int speed_req()
 
 
 double calc_speed(){
-   accel = gas * 0.5 - brake * 0.5 + 0.25 * -slope;
-   speed += accel * 0.2;
-   analogWrite(pin_speed, map(speed, 40, 70, 0, 255));
-   return speed; 
+   accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
+   speed2 += accel * 0.2;
+   
+   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255));
+   return speed2; 
 }
 
 // --------------------------------------
@@ -124,18 +127,24 @@ int slope_req(){
    // Cuesta arriba aceleracion - 0.25
    // Cuesta abajo aceleracion + 0.25
    if (request_received && !requested_answered && 0 == strcmp("SLP: REQ\n",request)){
-      if(digitalRead(pin_switch_1)){
-         sprintf(answer,"SLP:DOWN\n");       
+     if (digitalRead(pin_switch_1) == LOW) {
+        // Se enciende el LED:
+        slope=-1;
+        sprintf(answer,"SLP:DOWN\n"); 
       }
-      else if(digitalRead(pin_switch_2)){
-         sprintf(answer,"SLP:  UP\n");
+      else if (digitalRead(pin_switch_2) == LOW){
+        // Se apaga el LED:
+        slope=1;
+       sprintf(answer,"SLP:  UP\n"); 
       }
-      else{
-         sprintf(answer,"SLP:FLAT\n");
+      else { 
+        slope=0;
+        sprintf(answer,"SLP:FLAT\n");
       }
+      
       requested_answered = true;
    }
-
+  
 
 }
 
@@ -146,12 +155,14 @@ int slope_req(){
 int brake_req(){
    //Si esta activo aceleracion - 0,5
    if(request_received && !requested_answered && 0 == strcmp("BRK: SET\n",request)){
+     brake=1;
       digitalWrite(pin_brake, HIGH);
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("BRK: CLR\n",request)){
-      digitalrite(pin_brake, LOW);
+     brake=0;
+      digitalWrite(pin_brake, LOW);
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
@@ -165,14 +176,14 @@ int brake_req(){
 int gas_req(){
    //Si esta activo aceleracion + 0,5
    if(request_received && !requested_answered && 0 == strcmp("GAS: SET\n",request)){
-      gas = true;
+      gas = 1;
       digitalWrite(pin_gas, HIGH);
       sprintf(answer,"GAS:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("GAS: CLR\n",request)){
-      gas = false;
-      digitalrite(pin_gas, LOW);
+      gas = 0;
+      digitalWrite(pin_gas, LOW);
       sprintf(answer,"GAS:  OK\n");
       requested_answered = true;
    }
@@ -184,17 +195,18 @@ int gas_req(){
 //--------------------------------------
 int mix_req(){
 
-   if(request_received && !requested_answered && 0 == strcmp("GAS: SET\n",request)){
+   if(request_received && !requested_answered && 0 == strcmp("MIX: SET\n",request)){
       mix = true;
       digitalWrite(pin_mix, HIGH);
-      sprintf(answer,"GAS:OK\n");
+      sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
    }
-   else if (request_received && !requested_answered && 0 == strcmp("GAS: CLR\n",request)){
+   else if (request_received && !requested_answered && 0 == strcmp("MIX: CLR\n",request)){
       mix = false;
-      digitalrite(pin_mix, LOW);
-      sprintf(answer,"GAS:OK\n");
+      digitalWrite(pin_mix, LOW);
+      sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
+      
    }
 }
 
@@ -207,12 +219,13 @@ void setup()
 {
    // Setup Serial Monitor
    Serial.begin(9600);
-   pinmode(pin_gas, OUTPUT);
-   pinmode(pin_brake, OUTPUT);
-   pinmode(pin_mix, OUTPUT);
-   pinmode(pin_speed, OUTPUT);
-   pinmode(pin_switch_1, INPUT);
-   pinmode(pin_switch_2, INPUT);
+   pinMode(pin_gas, OUTPUT);
+   pinMode(pin_brake, OUTPUT);
+   pinMode(pin_mix, OUTPUT);
+   pinMode(pin_speed, OUTPUT);
+   pinMode(pin_switch_1, INPUT_PULLUP);
+   pinMode(pin_switch_2, INPUT_PULLUP);
+   time_start = millis();
 }
 
 // --------------------------------------
@@ -220,31 +233,32 @@ void setup()
 // --------------------------------------
 void loop()
 {
-   if (time_start == null){
-     time_start = millis();
-   }
    comm_server();
    speed_req();
+   
+   gas_req();
    brake_req();
    mix_req();
-   calc_speed();
+   slope_req();
    time_end = millis();
-   if (time_start >= time_end){
-     time_sleep = 200 - MAX_TIME - time_start + time_end;
-   }
-   else{
-     time_sleep = 200 - time_end - time_start;
-   }
-
-   if(time_sleep > 10){
-     delay(time_sleep);
-   }
-   else if(time_sleep >= 10 && time_sleep <= 0){
-     delayMicroseconds(time_sleep);
+   if(time_start >= time_end){
+     time_sleep = 200 - (MAX_TIME - time_start + time_end);
    }
    else {
-      Serial.print("MSG: ERR\n");
-      exit(-1);
+      time_sleep = 200 - (time_end - time_start);
+      
    }
+   if (time_sleep <= 10 && time_sleep > 0){
+      delayMicroseconds(time_sleep * 1000);
+   }
+   else if(time_sleep > 10){
+     delay(time_sleep);
+   }
+   else{
+     Serial.print("MSG: E2R\n");
+     exit(-1);
+   }
+   
    time_start += 200; 
+   
 }
