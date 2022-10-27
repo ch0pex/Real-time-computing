@@ -1,6 +1,5 @@
-
 //-Uncomment to compile with arduino support
-//#define ARDUINO
+#define ARDUINO
 
 //-------------------------------------
 //-  Include files
@@ -42,7 +41,7 @@ bool gas = false;
 bool mix = false; 
 int slope = 0;
 int lit = 0.0;
-bool lam = false;  
+bool lam = false;
 
 struct timespec time_msg = {0,400000000};
 
@@ -369,8 +368,8 @@ int task_lit()
     char answer[MSG_LEN+1];
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
-    strcpy(request,"LIT: REQ\n")
-    
+    strcpy(request,"LIT: REQ\n");
+
 #if defined(ARDUINO)
     // use UART serial module
     write(fd_serie, request, MSG_LEN);
@@ -380,13 +379,18 @@ int task_lit()
     //Use the simulator
     simulator(request, answer);
 #endif
+    if (1 == sscanf (answer, "LIT: %d%%\n", &lit)){
+    	if(lit>=50){
+    		displayLightSensor(0);
+    	}
+    	else{
+    	  displayLightSensor(1);
+        }
 
-    // display speed
-    if (1 == sscanf (answer, "LIT:%f%\n", &lit)){
-        displayLightSensor(lit);
-    }
+
+
     return 0;
-
+    }
 }
 
 int task_lamp(){
@@ -394,7 +398,17 @@ int task_lamp(){
     char answer[MSG_LEN+1];
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
-    strcpy(request,"LAM: REQ\n")
+    if(lit <= 50 && lam == false){
+             //activar acelerador
+            strcpy(request, "LAM: SET\n");
+        }
+        if (lit > 51 && lam == true){
+            //desactivar acelerador
+            strcpy(request, "LAM: CLR\n");
+        }
+
+
+        if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
 #if defined(ARDUINO)
     // use UART serial module
     write(fd_serie, request, MSG_LEN);
@@ -404,11 +418,12 @@ int task_lamp(){
     //Use the simulator
     simulator(request, answer);
 #endif
+        }
     // display slope
     if (0 == strcmp(answer, "LAM:  OK\n")){
-        lam = !lam
-        displaySlope(lam);
-    } 
+        lam = !lam;
+        displayLamps(lam);
+    }
     return 0;
 
 }
@@ -428,6 +443,8 @@ void plan1(){
         task_speed();
         task_gas();
         task_brake();
+        task_lit();
+        task_lamp();
         if (cs == 1 || cs == 2){
             task_mixer();
         }
@@ -454,7 +471,7 @@ void *controller(void *arg)
 {
 
     while(1) {
-        plan1();      
+        plan1();
     }
 }
 
