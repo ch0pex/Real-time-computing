@@ -1,5 +1,5 @@
 //-Uncomment to compile with arduino support
-#define ARDUINO
+//#define ARDUINO
 
 //-------------------------------------
 //-  Include files
@@ -28,7 +28,7 @@
 //-  Constants
 //-------------------------------------
 #define MSG_LEN 9 //8?
-#define CICLO_SEC 10.0
+#define CICLO_SEC_B 5.0
 #define NS_PER_S  1000000000
 //#define SLAVE_ADDR 0x8
 
@@ -389,8 +389,9 @@ int task_lit()
 
 
 
-    return 0;
+
     }
+    return 0;
 }
 
 int task_lamp(){
@@ -432,24 +433,26 @@ int task_lamp(){
 
 void plan1(){
     //static clock_t tiempo_inicio, tiempo_final;
-    struct timespec cs_time = {10,0};
+    struct timespec cs_time = {5,0};
     struct timespec start_time;
     struct timespec end_time;
     struct timespec diff_time;
     int cs = 0; 
     clock_gettime(CLOCK_REALTIME, &start_time);
     while(1){
-        task_slope();
-        task_speed();
-        task_gas();
-        task_brake();
         task_lit();
         task_lamp();
-        if (cs == 1 || cs == 2){
-            task_mixer();
-        }
+        if (cs == 0) {
+        	task_slope();
+            task_speed();
 
-        cs = (cs + 1) % 3;
+        }
+        else if (cs == 1){
+        	task_brake();
+        	task_gas();
+            task_mixer();
+               }
+        cs = (cs + 1) % 2;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
