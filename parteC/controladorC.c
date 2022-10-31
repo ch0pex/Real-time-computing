@@ -1,5 +1,5 @@
 //-Uncomment to compile with arduino support
-//#define ARDUINO
+#define ARDUINO
 
 //-------------------------------------
 //-  Include files
@@ -40,7 +40,7 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
-int distancia = 0;
+double distancia = 0;
 int lit = 0.0;
 bool lam = false;
 
@@ -556,9 +556,45 @@ int task_dist(){
 	#endif
 
 	    // display speed
-	    if (1 == sscanf (answer, "DS:%d\n", &distancia)){
+	    if (1 == sscanf (answer, "DS:%le\n", &distancia)){
 	        displayDistance(distancia);
 	    }
+	    return 0;
+}
+int task_move(){
+	char request[MSG_LEN+1];
+	    char answer[MSG_LEN+1];
+
+	    //--------------------------------
+	    //  request speed and display it
+	    //--------------------------------
+
+	    //clear request and answer
+	    memset(request, '\0', MSG_LEN+1);
+	    memset(answer, '\0', MSG_LEN+1);
+
+	    // request speed
+	    strcpy(request, "STP: REQ\n");
+
+	#if defined(ARDUINO)
+	    // use UART serial module
+	    write(fd_serie, request, MSG_LEN);
+	    nanosleep(&time_msg, NULL);
+	    read_msg(fd_serie, answer, MSG_LEN);
+	#else
+	    //Use the simulator
+	    simulator(request, answer);
+	#endif
+
+	    // display speed
+	    if (0 == strcmp(answer, "STP:  GO\n")){
+	    		displayStop(0);
+	            return 1;
+	        }
+	    else if (0 == strcmp(answer, "STP:STOP\n")){
+	    	    displayStop(1);
+	            return 0;
+	    	        }
 	    return 0;
 }
 
@@ -638,15 +674,52 @@ int plan2(){
 
         	return 3;
         }
+        /*
         if(distancia==0 && speed>10){
 
             return 1;
                 }
+        */
+        if(distancia>11000){
+        	return 1;
+        }
         nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }
 }
+int plan3(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {5,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0;
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    while(1){
 
+
+        task_lamp_B();
+        if (cs == 0) {
+        	task_mixer();
+
+
+        }
+        if(task_move() == 1){
+        	return 1;
+        }
+        cs = (cs + 1) % 2;
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        time_diff(end_time,start_time, &diff_time);
+        time_diff(cs_time,diff_time, &diff_time);
+
+        if(time_comp(cs_time,diff_time) == -1){
+            printf("Error");
+            exit(-1);
+        }
+        nanosleep(&diff_time, NULL);
+        time_add(start_time,cs_time, &start_time);
+    }
+}
 //-------------------------------------
 //-  Function: controller
 //-------------------------------------
