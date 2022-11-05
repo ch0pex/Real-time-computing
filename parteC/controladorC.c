@@ -511,6 +511,7 @@ int task_lamp_B(){
     if(!lam){
              //activar acelerador
     	strcpy(request, "LAM: SET\n");
+
     }
         if (0 == strcmp(request, "LAM: SET\n")) {
 #if defined(ARDUINO)
@@ -524,9 +525,11 @@ int task_lamp_B(){
 #endif
         }
     // display slope
-    if (0 == strcmp(answer, "LAM:  OK\n")){
-        displayLamps(lam);
-    }
+        if (0 == strcmp(answer, "LAM:  OK\n")){
+        	lam=true;
+            displayLamps(lam);
+        }
+
     return 0;
 
 }
