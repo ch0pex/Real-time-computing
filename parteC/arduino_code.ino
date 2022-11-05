@@ -280,38 +280,50 @@ int move_req()
    return 0;
 }
 
-double select_distance()
-{
-  valor_pot = analogRead(A1);
-    valorMapeado_pot = map(valor_pot, 0, 1023, 10000, 90000);
-    valorDisplay = map(valorMapeado_pot, 10000, 90000, 1, 9);
+int show_distance(bool modo){ //cuando le llegue 0 es que esta en el plan 1 y la distancia no se mueve
+  
+  if (modo==false){
+  valorDisplay = map(valorMapeado_pot, 10000, 90000, 1, 9);
+  }
+  else {
+    distance = distance - (speed2*0.2) + (0.5*accel*0.2*0.2);
+    valorDisplay = map(distance, 0, 90000, 0, 9);
+    
+  }
   //Imprimimos por el monitor serie
   
   
   switch (valorDisplay){
+    case 0:
+      digitalWrite(display_a,LOW);
+      digitalWrite(display_b,LOW);
+      digitalWrite(display_c,LOW);
+      digitalWrite(display_d,LOW);
+      break;
     case 1:
       digitalWrite(display_a,HIGH);
       digitalWrite(display_b,LOW);
       digitalWrite(display_c,LOW);
       digitalWrite(display_d,LOW);
-      return valorMapeado_pot;
+      break;
     case 2:
       digitalWrite(display_a,LOW);
       digitalWrite(display_b,HIGH);
       digitalWrite(display_c,LOW);
       digitalWrite(display_d,LOW);
-      return valorMapeado_pot;
+      break;
     case 3:
       digitalWrite(display_a,HIGH);
       digitalWrite(display_b,HIGH);
       digitalWrite(display_c,LOW);
       digitalWrite(display_d,LOW);
-      return valorMapeado_pot;
+      break;
     case 4:
       digitalWrite(display_a,LOW);
       digitalWrite(display_b,LOW);
       digitalWrite(display_c,HIGH);
       digitalWrite(display_d,LOW);
+      break;
       
     case 5:
       digitalWrite(display_a,HIGH);
@@ -319,42 +331,48 @@ double select_distance()
       digitalWrite(display_c,HIGH);
       digitalWrite(display_d,LOW);
       
-      return valorMapeado_pot;
+      break;
     case 6:
       digitalWrite(display_a,LOW);
       digitalWrite(display_b,HIGH);
       digitalWrite(display_c,HIGH);
       digitalWrite(display_d,LOW);
-      return valorMapeado_pot;
       break;
+      
     case 7:
       digitalWrite(display_a,HIGH);
       digitalWrite(display_b,HIGH);
       digitalWrite(display_c,HIGH);
       digitalWrite(display_d,LOW);
       
-      return valorMapeado_pot;
+      break;
     case 8:
       digitalWrite(display_a,LOW);
       digitalWrite(display_b,LOW);
       digitalWrite(display_c,LOW);
       digitalWrite(display_d,HIGH);
       
-      return valorMapeado_pot;
+      break;
     case 9:
       digitalWrite(display_a,HIGH);
       digitalWrite(display_b,LOW);
       digitalWrite(display_c,LOW);
       digitalWrite(display_d,HIGH);
-      return valorMapeado_pot;
+      break;
   }
+}
+double select_distance()
+{
+  valor_pot = analogRead(A1);
+  valorMapeado_pot = map(valor_pot, 0, 1023, 10000, 90000);
+    
   
 }  
 
 int button_press()
 {
       buttonState = digitalRead(buttonPin);
-    
+      
       // compare the buttonState to its previous state
       if (buttonState != lastButtonState) {
         // if the state has changed, increment the counter
@@ -362,7 +380,7 @@ int button_press()
           // if the current state is HIGH then the button
           // wend from off to on:
           if(movimiento = true){
-            distance = select_distance();
+            distance = valorMapeado_pot;
             
            
           }
@@ -404,7 +422,7 @@ int button_press2()
 int distance_req()
 {
    // Calculo de la velocidad
-   distance = distance - (speed2*0.2) + (0.5*accel*0.2*0.2);
+   
    // If there is a request not answered, check if this is the one
    if ( request_received && !requested_answered && (0 == strcmp("DS:  REQ\n",request)) ) {
       // send the answer for speed request
@@ -452,8 +470,10 @@ int plan1(){
    bright_req();
    lam_req();
    
-   button_press();
+   select_distance(); 
    distance_req();
+   show_distance(0);
+   button_press();
    move_req();
    time_end = millis();
    
@@ -478,11 +498,11 @@ int plan1(){
    
    time_start += 200; 
    
-   if(distance<11000){
-     return 2;
-   }
-   else if(distance>=11000){
+   if(distance==99999){
      return 1;
+   }
+   else{
+     return 2;
    }
 }
 int plan2(){
@@ -496,8 +516,9 @@ int plan2(){
    bright_req();
    lam_req();
    
-   
+   show_distance(1);
    distance_req();
+   
    move_req();
    time_end = millis();
    
@@ -524,6 +545,7 @@ int plan2(){
    
    if(distance<=0 && speed2<=10){
      movimiento = false;
+     distance=0;
      return 3;
    }
    else if(distance<=0 && speed2>10){
@@ -543,7 +565,9 @@ int plan3(){
    lam_req();
    
    button_press2();
+   
    distance_req();
+   
    move_req();
    time_end = millis();
    
