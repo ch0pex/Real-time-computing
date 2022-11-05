@@ -22,6 +22,7 @@ int brake = 0;
 int gas = 0; 
 int bright = 0; 
 int slope = 0;
+int valorLDR = 0;
 bool request_received = false;
 bool requested_answered = false;
 char request[MESSAGE_SIZE+1];
@@ -37,6 +38,7 @@ int pin_speed = 10;
 int pin_switch_1 = 9;
 int pin_switch_2 = 8;
 int pin_lam=7;
+
 bool movimiento = true;
 
 //Variables necesarias para la funcion de elegir distancia
@@ -103,11 +105,24 @@ int comm_server()
    }
 }
 
+double calc_speed(){
+   accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
+   speed2 += accel * 0.2;
+   if(speed2>40){
+     analogWrite(pin_speed, map(speed2, 40, 70, 0, 255));
+   }
+   else{
+     analogWrite(pin_speed, 0);
+   }
+   return speed2; 
+}
+
 // --------------------------------------
 // Function: speed_req
 // Intensidad del led en funcion de la velocidad
 // Calculamos velocidad  
 // --------------------------------------
+
 int speed_req()
 {
    // Calculo de la velocidad
@@ -124,10 +139,14 @@ int speed_req()
    return 0;
 }
 
+int read_bright(){
+   valorLDR = analogRead(A0);
+   bright = map(valorLDR, 0, 1023, 0, 100);
+}
 int bright_req()
 {
    // Calculo de la velocidad
-   bright = random(0,100);
+   read_bright();
    // If there is a request not answered, check if this is the one
    if ( request_received && !requested_answered && (0 == strcmp("LIT: REQ\n",request)) ) {
       // send the answer for speed request
@@ -157,13 +176,6 @@ int lam_req(){
 
 
 
-double calc_speed(){
-   accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
-   speed2 += accel * 0.2;
-   
-   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255));
-   return speed2; 
-}
 
 
 // --------------------------------------
@@ -551,6 +563,7 @@ int plan2(){
    else if(distance<=0 && speed2>10){
      return 1;
    }
+   return 2;
 }
 int plan3(){
    
@@ -597,6 +610,7 @@ int plan3(){
    if(movimiento == true){
      return 1;
    }
+   return 3;
    
 }
 // --------------------------------------
