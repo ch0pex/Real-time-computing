@@ -9,30 +9,43 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include <rtems.h>
 #include <rtems/termiostypes.h>
 #include <bsp.h>
 
-#include "displayD.h"
+#include "displayA.h"
 
 //-------------------------------------
 //-  Constants
 //-------------------------------------
-#define MSG_LEN 9
-#define SLAVE_ADDR 0x8
+#define MSG_LEN 9 //8?
+#define CICLO_SEC_B 5.0
+#define NS_PER_S  1000000000
+//#define SLAVE_ADDR 0x8
 
 //-------------------------------------
 //-  Global Variables
 //-------------------------------------
-float speed = 0.0;
+double speed = 0.0;
+bool brake = false;
+bool gas = false; 
+bool mix = false; 
+int slope = 0;
+double distancia = 0;
+int lit = 0.0;
+bool lam = false;
+bool emergency = false;
 struct timespec time_msg = {0,400000000};
+
 int fd_serie = -1;
 
 //-------------------------------------
@@ -78,6 +91,75 @@ int read_msg(int fd, char *buffer, int max_size)
     return 0;
 }
 
+// ------------------------------------
+//---------TIme operations-------------
+//-------------------------------------
+double get_Clock()
+{
+    struct timespec tp;
+    double reloj;
+    
+    clock_gettime (CLOCK_REALTIME, &tp);
+    reloj = ((double)tp.tv_sec) +
+    ((double)tp.tv_nsec) / ((double)NS_PER_S);
+    //printf ("%d:%d",tp.tv_sec,tp.tv_nsec);
+    
+    return (reloj);
+}
+
+/************************************
+ *  Function: diffTime
+ ************************************/
+void time_diff(struct timespec end, 
+              struct timespec start,
+              struct timespec *diff)
+{
+    if (end.tv_nsec < start.tv_nsec) {
+        diff->tv_nsec = NS_PER_S - start.tv_nsec + end.tv_nsec;
+        diff->tv_sec = end.tv_sec - (start.tv_sec+1);
+    } else {
+        diff->tv_nsec = end.tv_nsec - start.tv_nsec;
+        diff->tv_sec = end.tv_sec - start.tv_sec;
+    }
+}
+
+/***********************************
+ *  Function: addTime
+ ***********************************/
+void time_add(struct timespec end, 
+             struct timespec start,
+             struct timespec *add)
+{
+    unsigned long aux;
+    aux = start.tv_nsec + end.tv_nsec;
+    add->tv_sec = start.tv_sec + end.tv_sec +
+    (aux / NS_PER_S);
+    add->tv_nsec = aux % NS_PER_S;
+}
+
+/*************************************
+ *  Function: compTime
+ *************************************/
+int time_comp(struct timespec t1, 
+             struct timespec t2)
+{
+    if (t1.tv_sec == t2.tv_sec) {
+        if (t1.tv_nsec == t2.tv_nsec) {
+            return (0);
+        } else if (t1.tv_nsec > t2.tv_nsec) {
+            return (1);
+        } else if (t1.tv_nsec < t2.tv_nsec) {
+            return (-1);
+        }
+    } else if (t1.tv_sec > t2.tv_sec) {
+        return (1);
+    } else if (t1.tv_sec < t2.tv_sec) {
+        return (-1);
+    }
+    return (0);
+}
+
+
 //-------------------------------------
 //-  Function: task_speed
 //-------------------------------------
@@ -108,7 +190,7 @@ int task_speed()
 #endif
 
     // display speed
-    if (1 == sscanf (answer, "SPD:%f\n", &speed)){
+    if (1 == sscanf (answer, "SPD:%lf\n", &speed)){
         displaySpeed(speed);
     }
     return 0;
@@ -125,7 +207,6 @@ int task_slope()
     //--------------------------------
     //  request slope and display it
     //--------------------------------
-
     //clear request and answer
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
@@ -142,27 +223,660 @@ int task_slope()
     //Use the simulator
     simulator(request, answer);
 #endif
-
     // display slope
     if (0 == strcmp(answer, "SLP:DOWN\n")) displaySlope(-1);
     if (0 == strcmp(answer, "SLP:FLAT\n")) displaySlope(0);
     if (0 == strcmp(answer, "SLP:  UP\n")) displaySlope(1);
-
     return 0;
 }
 
+//-------------------------------------
+// A partir de los datos recibidos determina si activar o no el freno ( en funcion de la velocidad y la cuesta)
+//-------------------------------------
+int task_brake()
+{   
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+     
+    if(speed >= 56 && brake == false){
+         //activar freno   
+        strcpy(request, "BRK: SET\n");
+    }
+    if (speed < 56 && brake == true){
+        //desactivar freno
+        strcpy(request, "BRK: CLR\n");
+    }
+
+    if (0 == strcmp(request, "BRK: SET\n") || 0 == strcmp(request, "BRK: CLR\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "BRK:  OK\n")) {
+        brake = !brake;
+        displayBrake(brake);
+    }
+    return 0; 
+    //dispalyBrake(int brake);
+}
+int task_brake_B()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+
+    if(speed >=6 && brake == false){
+         //activar freno
+        strcpy(request, "BRK: SET\n");
+    }
+    if (speed < 6 && brake == true){
+        //desactivar freno
+        strcpy(request, "BRK: CLR\n");
+    }
+
+    if (0 == strcmp(request, "BRK: SET\n") || 0 == strcmp(request, "BRK: CLR\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "BRK:  OK\n")) {
+        brake = !brake;
+        displayBrake(brake);
+    }
+    return 0;
+    //dispalyBrake(int brake);
+}
+int task_brake_C()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+
+    if(brake == false){
+         //activar freno
+        strcpy(request, "BRK: SET\n");
+    }
+
+    if (0 == strcmp(request, "BRK: SET\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "BRK:  OK\n")) {
+        brake = true;
+        displayBrake(brake);
+    }
+    return 0;
+    //dispalyBrake(int brake);
+}
+//-------------------------------------
+// A partir de los datos recibidos determina si activar o no el acelerador ( en funcion de la velocidad y la cuesta)
+//-------------------------------------
+int task_gas()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+     
+    if(speed <= 54 && gas == false){
+         //activar acelerador   
+        strcpy(request, "GAS: SET\n");
+    }
+    if (speed > 54 && gas == true){
+        //desactivar acelerador
+        strcpy(request, "GAS: CLR\n");
+    }
+
+
+    if (0 == strcmp(request, "GAS: SET\n") || 0 == strcmp(request, "GAS: CLR\n")) {
+#if defined(ARDUINO)
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else   
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "GAS:  OK\n")) {
+        gas = !gas;
+        displayGas(gas);
+    }
+    return 0; 
+    //displayGas(int gas);
+}
+
+int task_gas_B()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+
+    if(speed <= 4 && gas == false){
+         //activar acelerador
+        strcpy(request, "GAS: SET\n");
+    }
+    if (speed > 4 && gas == true){
+        //desactivar acelerador
+        strcpy(request, "GAS: CLR\n");
+    }
+
+
+    if (0 == strcmp(request, "GAS: SET\n") || 0 == strcmp(request, "GAS: CLR\n")) {
+#if defined(ARDUINO)
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "GAS:  OK\n")) {
+        gas = !gas;
+        displayGas(gas);
+    }
+    return 0;
+    //displayGas(int gas);
+}
+int task_gas_C()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+
+    if( gas == true){
+         //activar acelerador
+        strcpy(request, "GAS: CLR\n");
+    }
+
+
+
+    if (0 == strcmp(request, "GAS: CLR\n")) {
+#if defined(ARDUINO)
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "GAS:  OK\n")) {
+        gas = false;
+        displayGas(gas);
+    }
+    return 0;
+    //displayGas(int gas);
+}
+
+//-------------------------------------
+// A partir de los datos recibidos determina si girar o no el mezclador ()
+int task_mixer()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    static double timeMix = -1;
+    static double oldTime;
+    static double time;  
+    memset(request,'\0',MSG_LEN+1);
+    memset(answer,'\0',MSG_LEN+1);
+
+    time = get_Clock();
+    if (timeMix != -1){
+        timeMix +=  time - oldTime; 
+    }
+    oldTime = time;
+    if ((timeMix > 30 || timeMix == -1) && mix == false){
+        //girar mezclador
+        strcpy(request, "MIX: SET\n");     
+    }
+    else if( timeMix > 30 && mix == true){
+        //parar mezclador        
+        strcpy(request, "MIX: CLR\n");
+    }
+
+
+    if (0 == strcmp(request, "MIX: SET\n") || 0 == strcmp(request, "MIX: CLR\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+        simulator(request, answer);
+#endif
+    }
+    //
+    if (0 == strcmp(answer, "MIX:  OK\n")) {
+        timeMix = 0;
+        mix = !mix;
+        displayMix(mix);
+    }
+    return 0; 
+
+    //displayMix(int mixer);
+}
+
+
+int task_lit()
+{
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    strcpy(request,"LIT: REQ\n");
+
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+    if (1 == sscanf (answer, "LIT: %d%%\n", &lit)){
+    	if(lit>=50){
+    		displayLightSensor(0);
+    	}
+    	else{
+    	  displayLightSensor(1);
+        }
+
+
+
+
+    }
+    return 0;
+}
+
+int task_lamp(){
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    if(lit <= 50 && lam == false){
+             //activar acelerador
+            strcpy(request, "LAM: SET\n");
+        }
+        if (lit > 51 && lam == true){
+            //desactivar acelerador
+            strcpy(request, "LAM: CLR\n");
+        }
+
+
+        if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+        }
+    // display slope
+    if (0 == strcmp(answer, "LAM:  OK\n")){
+        lam = !lam;
+        displayLamps(lam);
+    }
+    return 0;
+
+}
+
+int task_lamp_B(){
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    if(!lam){
+             //activar acelerador
+    	strcpy(request, "LAM: SET\n");
+
+    }
+        if (0 == strcmp(request, "LAM: SET\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+        }
+    // display slope
+        if (0 == strcmp(answer, "LAM:  OK\n")){
+        	lam=true;
+            displayLamps(lam);
+        }
+
+    return 0;
+
+}
+int task_dist(){
+	char request[MSG_LEN+1];
+	    char answer[MSG_LEN+1];
+
+	    //--------------------------------
+	    //  request speed and display it
+	    //--------------------------------
+
+	    //clear request and answer
+	    memset(request, '\0', MSG_LEN+1);
+	    memset(answer, '\0', MSG_LEN+1);
+
+	    // request speed
+	    strcpy(request, "DS:  REQ\n");
+
+	#if defined(ARDUINO)
+	    // use UART serial module
+	    write(fd_serie, request, MSG_LEN);
+	    nanosleep(&time_msg, NULL);
+	    read_msg(fd_serie, answer, MSG_LEN);
+	#else
+	    //Use the simulator
+	    simulator(request, answer);
+	#endif
+
+	    // display speed
+	    if (1 == sscanf (answer, "DS:%le\n", &distancia)){
+	        displayDistance(distancia);
+	    }
+	    return 0;
+}
+int task_move(){
+	char request[MSG_LEN+1];
+	    char answer[MSG_LEN+1];
+
+	    //--------------------------------
+	    //  request speed and display it
+	    //--------------------------------
+
+	    //clear request and answer
+	    memset(request, '\0', MSG_LEN+1);
+	    memset(answer, '\0', MSG_LEN+1);
+
+	    // request speed
+	    strcpy(request, "STP: REQ\n");
+
+	#if defined(ARDUINO)
+	    // use UART serial module
+	    write(fd_serie, request, MSG_LEN);
+	    nanosleep(&time_msg, NULL);
+	    read_msg(fd_serie, answer, MSG_LEN);
+	#else
+	    //Use the simulator
+	    simulator(request, answer);
+	#endif
+
+	    // display speed
+	    if (0 == strcmp(answer, "STP:  GO\n")){
+	    		displayStop(0);
+	            return 1;
+	        }
+	    else if (0 == strcmp(answer, "STP:STOP\n")){
+	    	    displayStop(1);
+	            return 0;
+	    	        }
+	    return 0;
+}
+int task_emergency(){
+    char request[MSG_LEN+1];
+    char answer[MSG_LEN+1];
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
+    if(emergency == false){
+             //activar acelerador
+            strcpy(request, "ERR: SET\n");
+        }
+
+
+
+        if (0 == strcmp(request, "ERR: SET\n")) {
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
+    //Use the simulator
+    simulator(request, answer);
+#endif
+        }
+    // display slope
+    if (0 == strcmp(answer, "ERR:  OK\n")){
+        emergency = true;
+
+    }
+    return 0;
+
+}
+
+int plan1(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {5,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0; 
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    while(1){
+        task_lit();
+        task_lamp();
+        if (cs == 0) {
+        	task_slope();
+            task_speed();
+            task_dist();
+        }
+        else if (cs == 1){
+        	task_brake();
+        	task_gas();
+            task_mixer();
+               }
+        cs = (cs + 1) % 2;
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        time_diff(end_time,start_time, &diff_time);
+        if(time_comp(cs_time,diff_time) == -1){
+             return 4;
+        }
+        time_diff(cs_time,diff_time, &diff_time);
+
+
+        if(distancia<11000){
+
+        	return 2;
+        }
+        nanosleep(&diff_time, NULL);
+        time_add(start_time,cs_time, &start_time);
+    }
+}
+
+
+int plan2(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {5,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0;
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    while(1){
+
+        task_speed();
+        task_brake_B();
+        task_gas_B();
+        if (cs == 0) {
+        	task_slope();
+
+            task_dist();
+        }
+        else if (cs == 1){
+        	task_lamp_B();
+            task_mixer();
+               }
+        cs = (cs + 1) % 2;
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        time_diff(end_time,start_time, &diff_time);
+        if(time_comp(cs_time,diff_time) == -1){
+             return 4;
+        }
+        time_diff(cs_time,diff_time, &diff_time);
+
+
+        if(distancia==0 && speed<=10){
+
+        	return 3;
+        }
+        /*
+        if(distancia==0 && speed>10){
+
+            return 1;
+                }
+        */
+        if(distancia>11000){
+        	return 1;
+        }
+        nanosleep(&diff_time, NULL);
+        time_add(start_time,cs_time, &start_time);
+    }
+}
+int plan3(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {5,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0;
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    while(1){
+
+
+        task_lamp_B();
+        if (cs == 0) {
+        	task_mixer();
+
+
+        }
+        if(task_move() == 1){
+        	return 1;
+        }
+        cs = (cs + 1) % 2;
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        time_diff(end_time,start_time, &diff_time);
+        time_diff(cs_time,diff_time, &diff_time);
+
+        if(time_comp(cs_time,diff_time) == -1){
+            return 4;
+        }
+        nanosleep(&diff_time, NULL);
+        time_add(start_time,cs_time, &start_time);
+    }
+}
+int plan4(){
+    //static clock_t tiempo_inicio, tiempo_final;
+    struct timespec cs_time = {5,0};
+    struct timespec start_time;
+    struct timespec end_time;
+    struct timespec diff_time;
+    int cs = 0;
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    while(1){
+
+
+        task_lamp_B();
+        if (cs == 0) {
+        	task_speed();
+        	task_gas_C();
+        	task_slope();
+        }
+        if (cs == 1) {
+            task_mixer();
+           	task_brake_C();
+           	task_emergency();
+                }
+        cs = (cs + 1) % 2;
+        clock_gettime(CLOCK_REALTIME, &end_time);
+        time_diff(end_time,start_time, &diff_time);
+        if(time_comp(cs_time,diff_time) == -1){
+            return 4;
+        }
+        time_diff(cs_time,diff_time, &diff_time);
+
+        nanosleep(&diff_time, NULL);
+        time_add(start_time,cs_time, &start_time);
+
+    }
+}
 //-------------------------------------
 //-  Function: controller
 //-------------------------------------
 void *controller(void *arg)
 {
-    // Endless loop
+	int plan = 1;
     while(1) {
-        // calling task of speed
-        task_speed();
 
-        // calling task of slope
-        task_slope();
+    	switch (plan)
+    	{
+			case 1:
+				plan = plan1();
+				break;
+			case 2:
+				plan = plan2();
+				break;
+			case 3:
+				plan = plan3();
+				break;
+			default:
+				plan = plan4();
+				break;
+    	}
     }
 }
 
