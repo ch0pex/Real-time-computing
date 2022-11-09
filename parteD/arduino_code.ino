@@ -22,7 +22,6 @@ int brake = 0;
 int gas = 0; 
 int bright = 0; 
 int slope = 0;
-int valorLDR = 0;
 bool request_received = false;
 bool requested_answered = false;
 bool emergency = false;
@@ -144,8 +143,7 @@ int speed_req()
 }
 
 int read_bright(){
-   valorLDR = analogRead(A0);
-   bright = map(valorLDR, 0, 1023, 0, 100);
+   bright = map(analogRead(A0), 0, 1023, 0, 100);
 }
 int bright_req()
 {
