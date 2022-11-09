@@ -10,7 +10,7 @@
 // Global Constants
 // --------------------------------------
 
-#define MESSAGE_SIZE 8
+#define MESSAGE_SIZE 9
 
 // --------------------------------------
 // Global Variables
@@ -23,6 +23,7 @@ int gas = 0;
 int bright = 0;
 bool mix = false; 
 int slope = 0;
+int bright = 0;
 bool request_received = false;
 bool requested_answered = false;
 char request[MESSAGE_SIZE+1];
@@ -111,10 +112,13 @@ int speed_req()
    return 0;
 }
 
+int read_bright(){
+   bright = map(analogRead(A0);, 0, 1023, 0, 100);
+}
 int bright_req()
 {
    // Calculo de la velocidad
-   bright = random(0,100);
+   read_bright();
    // If there is a request not answered, check if this is the one
    if ( request_received && !requested_answered && (0 == strcmp("LIT: REQ\n",request)) ) {
       // send the answer for speed request
