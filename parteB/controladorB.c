@@ -1,5 +1,5 @@
 //-Uncomment to compile with arduino support
-//#define ARDUINO
+#define ARDUINO
 
 //-------------------------------------
 //-  Include files
