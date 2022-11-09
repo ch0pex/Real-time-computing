@@ -10,7 +10,7 @@
 // Global Constants
 // --------------------------------------
 
-#define MESSAGE_SIZE 8
+#define MESSAGE_SIZE 9
 
 // --------------------------------------
 // Global Variables
@@ -114,6 +114,10 @@ double calc_speed(){
    else{
      analogWrite(pin_speed, 0);
    }
+	
+   if(speed2 <= 0){
+     speed2 = 0;
+   }
    return speed2; 
 }
 
@@ -140,12 +144,10 @@ int speed_req()
 }
 
 int read_bright(){
-   valorLDR = analogRead(A0);
-   bright = map(valorLDR, 0, 1023, 0, 100);
+   bright = map(analogRead(A0), 0, 1023, 0, 100);
 }
 int bright_req()
 {
-   // Calculo de la velocidad
    read_bright();
    // If there is a request not answered, check if this is the one
    if ( request_received && !requested_answered && (0 == strcmp("LIT: REQ\n",request)) ) {
