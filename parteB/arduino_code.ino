@@ -113,7 +113,7 @@ int speed_req()
 }
 
 int read_bright(){
-   bright = map(analogRead(A0);, 0, 1023, 0, 100);
+   bright = map(analogRead(A0), 0, 1023, 0, 100);
 }
 int bright_req()
 {
