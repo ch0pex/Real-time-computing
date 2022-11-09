@@ -279,11 +279,11 @@ int task_brake_B()
     memset(answer,'\0',MSG_LEN+1);
 
 
-    if(speed >=6 && brake == false){
+    if(speed > 2.5 && brake == false){
          //activar freno
         strcpy(request, "BRK: SET\n");
     }
-    if (speed < 6 && brake == true){
+    if (speed < 2.5 && brake == true){
         //desactivar freno
         strcpy(request, "BRK: CLR\n");
     }
@@ -357,11 +357,11 @@ int task_gas_B()
     memset(answer,'\0',MSG_LEN+1);
 
 
-    if(speed <= 4 && gas == false){
+    if(speed < 2.5 && gas == false){
          //activar acelerador
         strcpy(request, "GAS: SET\n");
     }
-    if (speed > 4 && gas == true){
+    if (speed > 2.5 && gas == true){
         //desactivar acelerador
         strcpy(request, "GAS: CLR\n");
     }
