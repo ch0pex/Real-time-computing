@@ -22,7 +22,6 @@ int brake = 0;
 int gas = 0; 
 int bright = 0; 
 int slope = 0;
-int valorLDR = 0;
 bool request_received = false;
 bool requested_answered = false;
 char request[MESSAGE_SIZE+1];
