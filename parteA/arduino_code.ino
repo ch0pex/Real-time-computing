@@ -10,7 +10,7 @@
 // Global Constants
 // --------------------------------------
 
-#define MESSAGE_SIZE 8
+#define MESSAGE_SIZE 9
 
 // --------------------------------------
 // Global Variables
