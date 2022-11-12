@@ -112,34 +112,34 @@ int speed_req()
 }
 
 int read_bright(){
+   // Lectura del brillo recogido por la foto resistencia
    bright = map(analogRead(A0), 0, 1023, 0, 100);
 }
 int bright_req()
 {
-   // Calculo de la velocidad
+   // Se lee la luminosidad 
    read_bright();
-   // If there is a request not answered, check if this is the one
-   if ( request_received && !requested_answered && (0 == strcmp("LIT: REQ\n",request)) ) {
-      // send the answer for speed request
+   if ( request_received && !requested_answered && (0 == strcmp("LIT: REQ\n",request)) ) { // Peticion de lectura del sensor de luz
+      
       char num_str[5];
       sprintf(num_str, "%d", bright);
       sprintf(answer,"LIT: %s%%\n",num_str);
-      // set request as answered
       requested_answered = true;
    }
    return 0;
 }
 int lam_req(){
-   //Si esta activo aceleracion - 0,5
-   if(request_received && !requested_answered && 0 == strcmp("LAM: SET\n",request)){
-     lam=true;
-      digitalWrite(pin_lam, HIGH);
+   if(request_received && !requested_answered && 0 == strcmp("LAM: SET\n",request)){ 
+      // Peticion para encender los focos 
+      lam=true;
+      digitalWrite(pin_lam, HIGH); // Enciende led 
       sprintf(answer,"LAM:  OK\n");
       requested_answered = true;
    }
-   else if (request_received && !requested_answered && 0 == strcmp("LAM: CLR\n",request)){
-     lam=false;
-      digitalWrite(pin_lam, LOW);
+   else if (request_received && !requested_answered && 0 == strcmp("LAM: CLR\n",request)){ 
+      // Peticion para apagar los focos 
+      lam=false;
+      digitalWrite(pin_lam, LOW); // Apaga led 
       sprintf(answer,"LAM:  OK\n");
       requested_answered = true;
    }
@@ -148,10 +148,10 @@ int lam_req(){
 
 
 double calc_speed(){
+   // Calculo de la velocidad 
    accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
    speed2 += accel * 0.2;
-   
-   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255));
+   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255)); 
    return speed2; 
 }
 
@@ -161,26 +161,22 @@ double calc_speed(){
 // --------------------------------------
 int slope_req(){
    
-   // Plano aceleracion + 0
-   // Periodo de 10s
-   // Cuesta arriba aceleracion - 0.25
-   // Cuesta abajo aceleracion + 0.25
-   if (request_received && !requested_answered && 0 == strcmp("SLP: REQ\n",request)){
-     if (digitalRead(pin_switch_1) == LOW) {
-        // Se enciende el LED:
-        slope=-1;
-        sprintf(answer,"SLP:DOWN\n"); 
+   if (request_received && !requested_answered && 0 == strcmp("SLP: REQ\n",request)){ // Peticion de Slope
+      if (digitalRead(pin_switch_1) == LOW) {
+         // Switch puesto en cuesta abajo 
+         slope=-1;
+         sprintf(answer,"SLP:DOWN\n"); 
       }
       else if (digitalRead(pin_switch_2) == LOW){
-        // Se apaga el LED:
-        slope=1;
-       sprintf(answer,"SLP:  UP\n"); 
+         // Switch puesto en cuesta arriba 
+         slope=1;
+         sprintf(answer,"SLP:  UP\n"); 
       }
       else { 
-        slope=0;
-        sprintf(answer,"SLP:FLAT\n");
+         // Switch puesto en plano 
+         slope=0;
+         sprintf(answer,"SLP:FLAT\n");
       }
-      
       requested_answered = true;
    }
   
@@ -192,16 +188,18 @@ int slope_req(){
 // Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
 // --------------------------------------
 int brake_req(){
-   //Si esta activo aceleracion - 0,5
+
    if(request_received && !requested_answered && 0 == strcmp("BRK: SET\n",request)){
-     brake=1;
-      digitalWrite(pin_brake, HIGH);
+      // Se activa el freno (encender led)
+      brake=1;
+      digitalWrite(pin_brake, HIGH); 
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("BRK: CLR\n",request)){
-     brake=0;
-      digitalWrite(pin_brake, LOW);
+      // Se desactiva el freno (apagar led)
+      brake=0;
+      digitalWrite(pin_brake, LOW); 
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
@@ -215,12 +213,14 @@ int brake_req(){
 int gas_req(){
    //Si esta activo aceleracion + 0,5
    if(request_received && !requested_answered && 0 == strcmp("GAS: SET\n",request)){
+      //Activar acelerador (encender led)
       gas = 1;
       digitalWrite(pin_gas, HIGH);
       sprintf(answer,"GAS:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("GAS: CLR\n",request)){
+      // Desactivar acelerador (apagar led)
       gas = 0;
       digitalWrite(pin_gas, LOW);
       sprintf(answer,"GAS:  OK\n");
@@ -235,17 +235,18 @@ int gas_req(){
 int mix_req(){
 
    if(request_received && !requested_answered && 0 == strcmp("MIX: SET\n",request)){
+      // Activar mix (encender led)
       mix = true;
       digitalWrite(pin_mix, HIGH);
       sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("MIX: CLR\n",request)){
+      // Desactivar mix (apagar led)
       mix = false;
       digitalWrite(pin_mix, LOW);
       sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
-      
    }
 }
 
@@ -258,12 +259,12 @@ void setup()
 {
    // Setup Serial Monitor
    Serial.begin(9600);
-   pinMode(pin_gas, OUTPUT);
-   pinMode(pin_brake, OUTPUT);
-   pinMode(pin_mix, OUTPUT);
-   pinMode(pin_speed, OUTPUT);
-   pinMode(pin_switch_1, INPUT_PULLUP);
-   pinMode(pin_switch_2, INPUT_PULLUP);
+   pinMode(pin_gas, OUTPUT); // Pin acelerador 
+   pinMode(pin_brake, OUTPUT); // Pin freno
+   pinMode(pin_mix, OUTPUT); // Pin mixer 
+   pinMode(pin_speed, OUTPUT); // Pin velocidad 
+   pinMode(pin_switch_1, INPUT_PULLUP); // Pin switch 3 posiciones 
+   pinMode(pin_switch_2, INPUT_PULLUP); // Pin switch 3 posiciones 
    time_start = millis();
 }
 
@@ -272,9 +273,9 @@ void setup()
 // --------------------------------------
 void loop()
 {
+   //Se ejecutan las tareas del plan de ejecucion (solo un CS). 
    comm_server();
    speed_req();
-   
    gas_req();
    brake_req();
    mix_req();
@@ -282,27 +283,23 @@ void loop()
    bright_req();
    lam_req();
    
+   // Se calcula el tiempo que debe dormir
    time_end = millis();
-   
-  
-   if(time_start >= time_end){
+   if(time_start >= time_end){ // Tiempo de inicio mayor que tiempo fin
      time_sleep = 200 - (MAX_TIME - time_start + time_end);
    }
-   else {
-      time_sleep = 200 - (time_end - time_start);
-      
+   else { // Tiempo de inicio menor que tiempo de fin
+      time_sleep = 200 - (time_end - time_start); 
    }
-   if (time_sleep <= 10 && time_sleep > 0){
+   if (time_sleep <= 10 && time_sleep > 0){ // DelayMicro si hay que dormir menos de 10ms
       delayMicroseconds(time_sleep * 1000);
    }
-   else if(time_sleep > 10){
-     delay(time_sleep);
+   else if(time_sleep > 10){ //Delay si hay que dormir mas de 10ms
+      delay(time_sleep);
    }
-   else{
-     Serial.print("MSG: E2R\n");
+   else{ // Caso de error. Si la ejecucion dura mas de 200ms time_sleep es < 0, se reinicia arduino.
      exit(-1);
-   }
-   
-   time_start += 200; 
+   }  
+   time_start += 200; // Sumamos tiempo teorico a time_start
    
 }

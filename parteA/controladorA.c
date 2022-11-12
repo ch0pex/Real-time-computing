@@ -40,7 +40,7 @@ bool brake = false;
 bool gas = false; 
 bool mix = false; 
 int slope = 0;
-int lit = 0.0; 
+
 
 struct timespec time_msg = {0,400000000};
 
@@ -105,9 +105,7 @@ double get_Clock()
     return (reloj);
 }
 
-/************************************
- *  Function: diffTime
- ************************************/
+// Function: diffTime
 void time_diff(struct timespec end, 
               struct timespec start,
               struct timespec *diff)
@@ -121,9 +119,7 @@ void time_diff(struct timespec end,
     }
 }
 
-/***********************************
- *  Function: addTime
- ***********************************/
+// Function: addTime
 void time_add(struct timespec end, 
              struct timespec start,
              struct timespec *add)
@@ -135,9 +131,7 @@ void time_add(struct timespec end,
     add->tv_nsec = aux % NS_PER_S;
 }
 
-/*************************************
- *  Function: compTime
- *************************************/
+// Function: timeComp
 int time_comp(struct timespec t1, 
              struct timespec t2)
 {
@@ -236,6 +230,7 @@ int task_brake()
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
 
+
     memset(request,'\0',MSG_LEN+1);
     memset(answer,'\0',MSG_LEN+1);
 
@@ -262,11 +257,11 @@ int task_brake()
     }
     //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
-        brake = brake ? false : true;
+        // Confirmacion de arduino, se cambia el estado del freno en el display
+        brake = !brake;
         displayBrake(brake);
     }
     return 0; 
-    //dispalyBrake(int brake);
 }
 
 //-------------------------------------
@@ -302,8 +297,9 @@ int task_gas()
 #endif
     }
     //
-    if (0 == strcmp(answer, "GAS:  OK\n")) {
-        gas = gas ? false : true;
+    if (0 == strcmp(answer, "GAS:  OK\n")) { 
+        // Confirmacion de arduino, se cambia el estado del acelerador en el display
+        gas = !gas;
         displayGas(gas);
     }
     return 0; 
@@ -313,6 +309,7 @@ int task_gas()
 
 //-------------------------------------
 // A partir de los datos recibidos determina si girar o no el mezclador ()
+//-------------------------------------
 int task_mixer()
 {
     char request[MSG_LEN+1];
@@ -350,14 +347,13 @@ int task_mixer()
 #endif
     }
     //
-    if (0 == strcmp(answer, "MIX:  OK\n")) {
+    if (0 == strcmp(answer, "MIX:  OK\n")) { 
+        // Confirmacion de arduino, se cambia el estado del mezclador en el display
         timeMix = 0;
-        mix = mix ? false : true;
-        displayMix(mix);
+        mix = !mix;
+        displayMix(mix); 
     }
     return 0; 
-
-    //displayMix(int mixer);
 }
 
 
@@ -371,26 +367,27 @@ void plan1(){
     struct timespec diff_time;
     int cs = 0; 
     clock_gettime(CLOCK_REALTIME, &start_time);
-    while(1){
+    while(1){ //Cada iteracion del bucle es un ciclo secundario
+        // Tareas del plan de ejecución
         task_slope();
         task_speed();
         task_gas();
         task_brake();
-        if (cs == 1 || cs == 2){
-            task_mixer();
+        if (cs == 0 || cs == 2){
+            task_mixer(); // Tarea que se ejecuta solo en el primer y segundo ciclo secundario
         }
 
+        // Se calcula el tiempo que el controlador debe dormir en cada CS
         cs = (cs + 1) % 3;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
 
-        if(time_comp(cs_time,diff_time) == -1){
-            printf("Error");
+        if(time_comp(cs_time,diff_time) == -1){ // Tiempo de ejecucion mayor al tiempo de ciclo secundario
             exit(-1);
         }
-        nanosleep(&diff_time, NULL);
-        time_add(start_time,cs_time, &start_time);
+        nanosleep(&diff_time, NULL); // Se duerme el tiempo correspondiente
+        time_add(start_time,cs_time, &start_time); // Suma tiempo teorico
     }
 }
 
@@ -401,7 +398,7 @@ void plan1(){
 void *controller(void *arg)
 {
 
-    while(1) {
+    while(1) { // Se ejecuta en bucle el plan de ejecucion 
         plan1();      
     }
 }

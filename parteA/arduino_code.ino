@@ -29,12 +29,16 @@ unsigned long time_start;
 unsigned long time_end; 
 unsigned long time_sleep; 
 unsigned long MAX_TIME = (unsigned long) -1;
+
+// PINS
 int pin_gas = 13 ;
 int pin_brake = 12;
 int pin_mix = 11;
 int pin_speed = 10;
 int pin_switch_1 = 9;
 int pin_switch_2 = 8;
+
+
 // --------------------------------------
 // Function: comm_server
 // --------------------------------------
@@ -118,28 +122,25 @@ double calc_speed(){
 }
 
 // --------------------------------------
-// Se lee la pendiente y se responde
+// Se lee la pendiente que viene indicada por el switch de tres posisiciones y se responde cuando se recibe la peticion
+// por parte del controlador
 // --------------------------------------
 int slope_req(){
-   
-   // Plano aceleracion + 0
-   // Periodo de 10s
-   // Cuesta arriba aceleracion - 0.25
-   // Cuesta abajo aceleracion + 0.25
    if (request_received && !requested_answered && 0 == strcmp("SLP: REQ\n",request)){
      if (digitalRead(pin_switch_1) == LOW) {
-        // Se enciende el LED:
+         //Cuesta abajo 
         slope=-1;
         sprintf(answer,"SLP:DOWN\n"); 
       }
       else if (digitalRead(pin_switch_2) == LOW){
-        // Se apaga el LED:
-        slope=1;
-       sprintf(answer,"SLP:  UP\n"); 
+         //Cuesta arriba
+         slope=1;
+         sprintf(answer,"SLP:  UP\n"); 
       }
       else { 
-        slope=0;
-        sprintf(answer,"SLP:FLAT\n");
+         //Plano
+         slope=0;
+         sprintf(answer,"SLP:FLAT\n");
       }
       
       requested_answered = true;
@@ -150,18 +151,19 @@ int slope_req(){
 
 
 // --------------------------------------
-// Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
+// Se activa o desactiva el led del freno en funcion de las ordenes recibidas por el servidor
 // --------------------------------------
 int brake_req(){
-   //Si esta activo aceleracion - 0,5
    if(request_received && !requested_answered && 0 == strcmp("BRK: SET\n",request)){
-     brake=1;
+      //Activar freno (encender led) 
+      brake=1;
       digitalWrite(pin_brake, HIGH);
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("BRK: CLR\n",request)){
-     brake=0;
+      //Desactivar freno (apagar led) 
+      brake=0;
       digitalWrite(pin_brake, LOW);
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
@@ -171,17 +173,18 @@ int brake_req(){
 
 
 // --------------------------------------
-// Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
+// Se activa o desactiva el led del acelerador en funcion de las ordenes recibidas por el servidor
 // --------------------------------------
 int gas_req(){
-   //Si esta activo aceleracion + 0,5
    if(request_received && !requested_answered && 0 == strcmp("GAS: SET\n",request)){
+      // Activar acelerador (encender led)
       gas = 1;
       digitalWrite(pin_gas, HIGH);
       sprintf(answer,"GAS:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("GAS: CLR\n",request)){
+      // Desactivar acelerador (apagar led)
       gas = 0;
       digitalWrite(pin_gas, LOW);
       sprintf(answer,"GAS:  OK\n");
@@ -191,17 +194,18 @@ int gas_req(){
 
 
 // --------------------------------------
-// Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
+// Se activa o desactiva el led del mixer en funcion de las ordenes recibidas por el servidor
 //--------------------------------------
 int mix_req(){
-
    if(request_received && !requested_answered && 0 == strcmp("MIX: SET\n",request)){
+      //Activar mix (encender led)
       mix = true;
       digitalWrite(pin_mix, HIGH);
       sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("MIX: CLR\n",request)){
+      //Desactivar mix (apagar led)
       mix = false;
       digitalWrite(pin_mix, LOW);
       sprintf(answer,"MIX:  OK\n");
@@ -219,12 +223,12 @@ void setup()
 {
    // Setup Serial Monitor
    Serial.begin(9600);
-   pinMode(pin_gas, OUTPUT);
-   pinMode(pin_brake, OUTPUT);
-   pinMode(pin_mix, OUTPUT);
-   pinMode(pin_speed, OUTPUT);
-   pinMode(pin_switch_1, INPUT_PULLUP);
-   pinMode(pin_switch_2, INPUT_PULLUP);
+   pinMode(pin_gas, OUTPUT); // Acelerador
+   pinMode(pin_brake, OUTPUT); // Freno
+   pinMode(pin_mix, OUTPUT); // Mixer
+   pinMode(pin_speed, OUTPUT); // Velocidad 
+   pinMode(pin_switch_1, INPUT_PULLUP);  // Palanca slope
+   pinMode(pin_switch_2, INPUT_PULLUP); // Palanca slope
    time_start = millis();
 }
 
@@ -233,32 +237,31 @@ void setup()
 // --------------------------------------
 void loop()
 {
-   comm_server();
+   //Se ejecutan las tareas del plan de ejecucion (solo un CS). 
+   comm_server(); 
    speed_req();
-   
    gas_req();
    brake_req();
    mix_req();
    slope_req();
+
+   // Se calcula el tiempo que debe dormir
    time_end = millis();
-   if(time_start >= time_end){
+   if(time_start >= time_end){ // Tiempo de inicio mayor que tiempo fin
      time_sleep = 200 - (MAX_TIME - time_start + time_end);
    }
-   else {
-      time_sleep = 200 - (time_end - time_start);
-      
+   else { // Tiempo de inicio menor que tiempo de fin
+      time_sleep = 200 - (time_end - time_start); 
    }
-   if (time_sleep <= 10 && time_sleep > 0){
+   if (time_sleep <= 10 && time_sleep > 0){ // DelayMicro si hay que dormir menos de 10ms
       delayMicroseconds(time_sleep * 1000);
    }
-   else if(time_sleep > 10){
-     delay(time_sleep);
+   else if(time_sleep > 10){ //Delay si hay que dormir mas de 10ms
+      delay(time_sleep);
    }
-   else{
-     Serial.print("MSG: E2R\n");
+   else{ // Caso de error. Si la ejecucion dura mas de 200ms time_sleep es < 0, se reinicia arduino.
      exit(-1);
-   }
-   
-   time_start += 200; 
+   }  
+   time_start += 200; // Sumamos tiempo teorico a time_start
    
 }

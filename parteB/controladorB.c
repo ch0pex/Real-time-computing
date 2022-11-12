@@ -106,9 +106,7 @@ double get_Clock()
     return (reloj);
 }
 
-/************************************
- *  Function: diffTime
- ************************************/
+// Function: diffTime
 void time_diff(struct timespec end, 
               struct timespec start,
               struct timespec *diff)
@@ -122,9 +120,8 @@ void time_diff(struct timespec end,
     }
 }
 
-/***********************************
- *  Function: addTime
- ***********************************/
+// Function: addTime
+
 void time_add(struct timespec end, 
              struct timespec start,
              struct timespec *add)
@@ -136,9 +133,7 @@ void time_add(struct timespec end,
     add->tv_nsec = aux % NS_PER_S;
 }
 
-/*************************************
- *  Function: compTime
- *************************************/
+// Function: compTime
 int time_comp(struct timespec t1, 
              struct timespec t2)
 {
@@ -263,6 +258,7 @@ int task_brake()
     }
     //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del acelerador en el display
         brake = !brake;
         displayBrake(brake);
     }
@@ -304,6 +300,7 @@ int task_gas()
     }
     //
     if (0 == strcmp(answer, "GAS:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del acelerador en el display
         gas = !gas;
         displayGas(gas);
     }
@@ -314,6 +311,7 @@ int task_gas()
 
 //-------------------------------------
 // A partir de los datos recibidos determina si girar o no el mezclador ()
+//-------------------------------------
 int task_mixer()
 {
     char request[MSG_LEN+1];
@@ -352,22 +350,27 @@ int task_mixer()
     }
     //
     if (0 == strcmp(answer, "MIX:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del mezclador en el display
         timeMix = 0;
         mix = !mix;
         displayMix(mix);
     }
     return 0; 
 
-    //displayMix(int mixer);
 }
 
 
+//-------------------------------------
+// A partir de los datos recibidos determina si hay luz o no
+//-------------------------------------
 int task_lit()
 {
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
+
+    //Peticion a arduino para leer la luz
     strcpy(request,"LIT: REQ\n");
 
 #if defined(ARDUINO)
@@ -380,49 +383,51 @@ int task_lit()
     simulator(request, answer);
 #endif
     if (1 == sscanf (answer, "LIT: %d%%\n", &lit)){
-    	if(lit>=50){
+    	if(lit>=50){ // Si lit es mayor o igual al 50% hay luz 
     		displayLightSensor(0);
     	}
-    	else{
+    	else{ // Si lit es menor a 50% esta a oscuras 
     	  displayLightSensor(1);
         }
-
-
-
-
     }
     return 0;
 }
 
+
+//-------------------------------------
+// A partir de los datos recibidos determina si encender o no los faros 
+//-------------------------------------
 int task_lamp(){
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
+
     if(lit <= 50 && lam == false){
-             //activar acelerador
-            strcpy(request, "LAM: SET\n");
-        }
-        if (lit > 51 && lam == true){
-            //desactivar acelerador
-            strcpy(request, "LAM: CLR\n");
-        }
+        //activar los faros 
+        strcpy(request, "LAM: SET\n");
+    }
+    if (lit > 51 && lam == true){
+        //desactivar los faros
+        strcpy(request, "LAM: CLR\n");
+    }
 
 
-        if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
+    if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
 #if defined(ARDUINO)
-    // use UART serial module
-    write(fd_serie, request, MSG_LEN);
-    nanosleep(&time_msg, NULL);
-    read_msg(fd_serie, answer, MSG_LEN);
+        // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
 #else
-    //Use the simulator
-    simulator(request, answer);
+        //Use the simulator
+        simulator(request, answer);
 #endif
-        }
+    }
     // display slope
     if (0 == strcmp(answer, "LAM:  OK\n")){
-        lam = !lam;
+        // Se cambia el estado de los faros en el display cuando se recibe la confirmacion de arduino
+        lam = !lam; 
         displayLamps(lam);
     }
     return 0;
@@ -439,30 +444,36 @@ void plan1(){
     struct timespec diff_time;
     int cs = 0; 
     clock_gettime(CLOCK_REALTIME, &start_time);
-    while(1){
+    while(1){ // Cada iteracion del bucle corresponde a un CS
+        // Tareas realizadas en todos los CS
         task_lit();
         task_lamp();
+
         if (cs == 0) {
+            //Tareas realizadas solamente en el primer CS
         	task_slope();
             task_speed();
 
         }
         else if (cs == 1){
+            //Tareas realizadas solamente en el segundo CS
         	task_brake();
         	task_gas();
             task_mixer();
-               }
+        }
         cs = (cs + 1) % 2;
+
+        // Se calcula el tiempo que se debe dormir 
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
 
         if(time_comp(cs_time,diff_time) == -1){
-            printf("Error");
+            // Si el tiempo de ejecucion supera al tiempo maximo asignado a cada CS 
             exit(-1);
         }
-        nanosleep(&diff_time, NULL);
-        time_add(start_time,cs_time, &start_time);
+        nanosleep(&diff_time, NULL); // Se duerme el tiempo restante
+        time_add(start_time,cs_time, &start_time); // Se suma el tiempo teorico al tiempo de inicio del CS
     }
 }
 
@@ -473,7 +484,7 @@ void plan1(){
 void *controller(void *arg)
 {
 
-    while(1) {
+    while(1) { // Se ejecuta en bucle el plan de ejecucion 
         plan1();
     }
 }

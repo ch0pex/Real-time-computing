@@ -107,9 +107,9 @@ double get_Clock()
     return (reloj);
 }
 
-/************************************
- *  Function: diffTime
- ************************************/
+
+//Function: diffTime
+
 void time_diff(struct timespec end, 
               struct timespec start,
               struct timespec *diff)
@@ -123,9 +123,7 @@ void time_diff(struct timespec end,
     }
 }
 
-/***********************************
- *  Function: addTime
- ***********************************/
+//Function: addTime
 void time_add(struct timespec end, 
              struct timespec start,
              struct timespec *add)
@@ -137,9 +135,7 @@ void time_add(struct timespec end,
     add->tv_nsec = aux % NS_PER_S;
 }
 
-/*************************************
- *  Function: compTime
- *************************************/
+//Function: CompTime
 int time_comp(struct timespec t1, 
              struct timespec t2)
 {
@@ -231,7 +227,7 @@ int task_slope()
 }
 
 //-------------------------------------
-// A partir de los datos recibidos determina si activar o no el freno ( en funcion de la velocidad y la cuesta)
+// PLAN 1: A partir de los datos recibidos determina si activar o no el freno ( en funcion de la velocidad y la cuesta)
 //-------------------------------------
 int task_brake()
 {   
@@ -243,7 +239,7 @@ int task_brake()
 
      
     if(speed >= 56 && brake == false){
-         //activar freno   
+        //activar freno   
         strcpy(request, "BRK: SET\n");
     }
     if (speed < 56 && brake == true){
@@ -264,13 +260,19 @@ int task_brake()
     }
     //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del freno en el display
         brake = !brake;
         displayBrake(brake);
     }
     return 0; 
     //dispalyBrake(int brake);
 }
-int task_brake_B()
+
+
+//-------------------------------------
+// PLAN 2 : Se activa o desactiva el freno en modo de parada en funcion de los datos recibidos
+//-------------------------------------
+int task_brake_B() 
 {
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
@@ -280,7 +282,7 @@ int task_brake_B()
 
 
     if(speed > 2.5 && brake == false){
-         //activar freno
+        //activar freno
         strcpy(request, "BRK: SET\n");
     }
     if (speed < 2.5 && brake == true){
@@ -299,8 +301,8 @@ int task_brake_B()
         simulator(request, answer);
 #endif
     }
-    //
     if (0 == strcmp(answer, "BRK:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del freno en el display
         brake = !brake;
         displayBrake(brake);
     }
@@ -308,7 +310,7 @@ int task_brake_B()
     //dispalyBrake(int brake);
 }
 //-------------------------------------
-// A partir de los datos recibidos determina si activar o no el acelerador ( en funcion de la velocidad y la cuesta)
+// PLAN 1: A partir de los datos recibidos determina si activar o no el acelerador (en funcion de la velocidad y la cuesta)
 //-------------------------------------
 int task_gas()
 {
@@ -341,12 +343,17 @@ int task_gas()
     }
     //
     if (0 == strcmp(answer, "GAS:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del acelerador en el display
         gas = !gas;
         displayGas(gas);
     }
     return 0; 
     //displayGas(int gas);
 }
+
+//-------------------------------------
+// PLAN 2: En el modo de parada se activa o desactiva el acelerador en funcion de los datos recibidos 
+//-------------------------------------
 
 int task_gas_B()
 {
@@ -379,6 +386,7 @@ int task_gas_B()
     }
     //
     if (0 == strcmp(answer, "GAS:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del acelerador en el display
         gas = !gas;
         displayGas(gas);
     }
@@ -387,7 +395,8 @@ int task_gas_B()
 }
 
 //-------------------------------------
-// A partir de los datos recibidos determina si girar o no el mezclador ()
+// A partir de los datos recibidos determina si girar o no el mezclador 
+//-------------------------------------
 int task_mixer()
 {
     char request[MSG_LEN+1];
@@ -426,16 +435,19 @@ int task_mixer()
     }
     //
     if (0 == strcmp(answer, "MIX:  OK\n")) {
+        // Confirmacion de arduino, se cambia el estado del mezclardor en el display
         timeMix = 0;
         mix = !mix;
         displayMix(mix);
     }
     return 0; 
 
-    //displayMix(int mixer);
 }
 
 
+//-------------------------------------
+// A partir de los datos recibidos determina si hay luz o no
+//-------------------------------------
 int task_lit()
 {
     char request[MSG_LEN+1];
@@ -454,20 +466,20 @@ int task_lit()
     simulator(request, answer);
 #endif
     if (1 == sscanf (answer, "LIT: %d%%\n", &lit)){
-    	if(lit>=50){
+    	if(lit>=50){ // Si lit es mayor o igual al 50% hay luz 
     		displayLightSensor(0);
     	}
-    	else{
+    	else{ // Si lit es menor al 50% no hay luz
     	  displayLightSensor(1);
         }
-
-
-
-
     }
     return 0;
 }
 
+
+//-------------------------------------
+// PLAN 1: A partir de los datos recibidos determina si encender o no los faros 
+//-------------------------------------
 int task_lamp(){
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
@@ -477,25 +489,25 @@ int task_lamp(){
              //activar acelerador
             strcpy(request, "LAM: SET\n");
         }
-        if (lit > 51 && lam == true){
-            //desactivar acelerador
-            strcpy(request, "LAM: CLR\n");
-        }
+    if (lit > 51 && lam == true){
+        //desactivar acelerador
+        strcpy(request, "LAM: CLR\n");
+    }
 
 
-        if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
+    if (0 == strcmp(request, "LAM: SET\n") || 0 == strcmp(request, "LAM: CLR\n")) {
 #if defined(ARDUINO)
-    // use UART serial module
-    write(fd_serie, request, MSG_LEN);
-    nanosleep(&time_msg, NULL);
-    read_msg(fd_serie, answer, MSG_LEN);
+        // use UART serial module
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
 #else
-    //Use the simulator
-    simulator(request, answer);
+        //Use the simulator
+        simulator(request, answer);
 #endif
-        }
-    // display slope
+    }
     if (0 == strcmp(answer, "LAM:  OK\n")){
+        // Confirmacion de arduino, se cambia el estado de los focos en el display
         lam = !lam;
         displayLamps(lam);
     }
@@ -503,49 +515,50 @@ int task_lamp(){
 
 }
 
+//-------------------------------------
+// PLAN 2: En el modo de parada se activan los faros en el display 
+//-------------------------------------
 int task_lamp_B(){
     char request[MSG_LEN+1];
     char answer[MSG_LEN+1];
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
     if(!lam){
-             //activar acelerador
+        // Si los faros no estan activados en el modo de parada siempre se activan, peticion de activacion
     	strcpy(request, "LAM: SET\n");
 
     }
-        if (0 == strcmp(request, "LAM: SET\n")) {
+    if (0 == strcmp(request, "LAM: SET\n")) {
 #if defined(ARDUINO)
     // use UART serial module
-    write(fd_serie, request, MSG_LEN);
-    nanosleep(&time_msg, NULL);
-    read_msg(fd_serie, answer, MSG_LEN);
+        write(fd_serie, request, MSG_LEN);
+        nanosleep(&time_msg, NULL);
+        read_msg(fd_serie, answer, MSG_LEN);
 #else
-    //Use the simulator
-    simulator(request, answer);
+        //Use the simulator
+        simulator(request, answer);
 #endif
-        }
-    // display slope
-        if (0 == strcmp(answer, "LAM:  OK\n")){
-        	lam=true;
-            displayLamps(lam);
-        }
+    }
+    if (0 == strcmp(answer, "LAM:  OK\n")){
+        // Confirmacion de arduino, se cambia el estado de los focos en el display
+        lam = true;
+        displayLamps(lam);
+    }
 
     return 0;
 
 }
+
+
 int task_dist(){
 	char request[MSG_LEN+1];
 	    char answer[MSG_LEN+1];
-
-	    //--------------------------------
-	    //  request speed and display it
-	    //--------------------------------
 
 	    //clear request and answer
 	    memset(request, '\0', MSG_LEN+1);
 	    memset(answer, '\0', MSG_LEN+1);
 
-	    // request speed
+	    // Se realiza la peticicion de lectura de distancia a la parada 
 	    strcpy(request, "DS:  REQ\n");
 
 	#if defined(ARDUINO)
@@ -558,8 +571,8 @@ int task_dist(){
 	    simulator(request, answer);
 	#endif
 
-	    // display speed
 	    if (1 == sscanf (answer, "DS:%le\n", &distancia)){
+            // Arduino devuelve la distancia a la parada y se muestra por el display 
 	        displayDistance(distancia);
 	    }
 	    return 0;
@@ -568,9 +581,6 @@ int task_move(){
 	char request[MSG_LEN+1];
 	    char answer[MSG_LEN+1];
 
-	    //--------------------------------
-	    //  request speed and display it
-	    //--------------------------------
 
 	    //clear request and answer
 	    memset(request, '\0', MSG_LEN+1);
@@ -589,15 +599,14 @@ int task_move(){
 	    simulator(request, answer);
 	#endif
 
-	    // display speed
 	    if (0 == strcmp(answer, "STP:  GO\n")){
-	    		displayStop(0);
-	            return 1;
-	        }
+            displayStop(0);
+            return 1;
+	    }
 	    else if (0 == strcmp(answer, "STP:STOP\n")){
-	    	    displayStop(1);
-	            return 0;
-	    	        }
+            displayStop(1);
+            return 0;
+	    }
 	    return 0;
 }
 
@@ -610,34 +619,37 @@ int plan1(){
     struct timespec diff_time;
     int cs = 0; 
     clock_gettime(CLOCK_REALTIME, &start_time);
-    while(1){
+    while(1){ // Cada iteracion del bucle corresponde a un ciclo secundario del plan de ejecucion 
+        //Tareas ejecutadas en todos los ciclos secundarios 
         task_lit();
         task_lamp();
         if (cs == 0) {
+            // Tareas ejecutadas solo en el primer ciclo secundario 
         	task_slope();
             task_speed();
             task_dist();
         }
         else if (cs == 1){
+            // Tareas ejecutadas solo en el segundo ciclo secundario
         	task_brake();
         	task_gas();
             task_mixer();
-               }
+        }
         cs = (cs + 1) % 2;
+        // Se calcula el tiempo que se debe dormir 
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
-
         if(time_comp(cs_time,diff_time) == -1){
-            printf("Error");
             exit(-1);
         }
-        if(distancia<11000){
 
+        if(distancia<11000){
+            // Si la distancia es menor de 11000 se cambia al modo de parada 
         	return 2;
         }
         nanosleep(&diff_time, NULL);
-        time_add(start_time,cs_time, &start_time);
+        time_add(start_time, cs_time, &start_time); // Se suma el tiempo teorico del CS al tiempo de inicio
     }
 }
 
@@ -704,8 +716,6 @@ int plan3(){
         task_lamp_B();
         if (cs == 0) {
         	task_mixer();
-
-
         }
         if(task_move() == 1){
         	return 1;
