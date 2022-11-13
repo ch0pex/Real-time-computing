@@ -304,8 +304,6 @@ int show_distance(bool modo){ //cuando le llegue 0 es que esta en el plan 1 y la
     
   }
   //Imprimimos por el monitor serie
-  
-  
   switch (valorDisplay){
     case 0:
       digitalWrite(display_a,LOW);
@@ -374,6 +372,9 @@ int show_distance(bool modo){ //cuando le llegue 0 es que esta en el plan 1 y la
       break;
   }
 }
+
+
+
 double select_distance()
 {
   valor_pot = analogRead(A1);
@@ -381,6 +382,8 @@ double select_distance()
     
   
 }  
+
+
 
 int button_press()
 {
@@ -407,6 +410,9 @@ int button_press()
         
     }
 }
+
+
+
 int button_press2()
 {
       buttonState = digitalRead(buttonPin);
@@ -432,6 +438,8 @@ int button_press2()
     }
 }
 
+
+
 int distance_req()
 {
    // Calculo de la velocidad
@@ -447,6 +455,7 @@ int distance_req()
    }
    return 0;
 }
+
 
 
 // --------------------------------------
@@ -471,6 +480,8 @@ void setup()
   
    pinMode(buttonPin, INPUT);
 }
+
+
 
 int plan1(){
    comm_server();
@@ -518,6 +529,9 @@ int plan1(){
      return 2;
    }
 }
+
+
+
 int plan2(){
    comm_server();
    speed_req();
@@ -566,6 +580,9 @@ int plan2(){
    }
    return 2;
 }
+
+
+
 int plan3(){
    
    comm_server();
@@ -614,6 +631,9 @@ int plan3(){
    return 3;
    
 }
+
+
+
 // --------------------------------------
 // Function: loop
 // --------------------------------------

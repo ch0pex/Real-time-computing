@@ -38,6 +38,8 @@ int pin_speed = 10;
 int pin_switch_1 = 9;
 int pin_switch_2 = 8;
 int pin_lam=7;
+
+
 // --------------------------------------
 // Function: comm_server
 // --------------------------------------
@@ -90,10 +92,10 @@ int comm_server()
    }
 }
 
+
+
 // --------------------------------------
-// Function: speed_req
-// Intensidad del led en funcion de la velocidad
-// Calculamos velocidad  
+// Devolvemos la velocidad actual cuando recibimos la peticion 
 // --------------------------------------
 int speed_req()
 {
@@ -111,10 +113,34 @@ int speed_req()
    return 0;
 }
 
+
+
+// --------------------------------------
+// Funcion para calcular la velocidad 
+// --------------------------------------
+double calc_speed(){
+   // Calculo de la velocidad 
+   accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
+   speed2 += accel * 0.2;
+   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255)); 
+   return speed2; 
+}
+
+
+
+// --------------------------------------
+// Funcion para leer el brillo de la fotoresistencia
+// --------------------------------------
 int read_bright(){
    // Lectura del brillo recogido por la foto resistencia
    bright = map(analogRead(A0), 0, 1023, 0, 100);
 }
+
+
+
+// --------------------------------------
+// Se recibe una peticion para devolver el brillo leido
+// --------------------------------------
 int bright_req()
 {
    // Se lee la luminosidad 
@@ -147,13 +173,6 @@ int lam_req(){
 
 
 
-double calc_speed(){
-   // Calculo de la velocidad 
-   accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
-   speed2 += accel * 0.2;
-   analogWrite(pin_speed, map(speed2, 40, 70, 0, 255)); 
-   return speed2; 
-}
 
 
 // --------------------------------------
@@ -182,6 +201,7 @@ int slope_req(){
   
 
 }
+
 
 
 // --------------------------------------
@@ -229,6 +249,7 @@ int gas_req(){
 }
 
 
+
 // --------------------------------------
 // Se activa o desactiva un led en funcion de las ordenes recibidas por el servidor
 //--------------------------------------
@@ -267,6 +288,7 @@ void setup()
    pinMode(pin_switch_2, INPUT_PULLUP); // Pin switch 3 posiciones 
    time_start = millis();
 }
+
 
 // --------------------------------------
 // Function: loop

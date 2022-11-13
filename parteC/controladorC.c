@@ -27,7 +27,7 @@
 //-------------------------------------
 //-  Constants
 //-------------------------------------
-#define MSG_LEN 9 //8?
+#define MSG_LEN 9 
 #define CICLO_SEC_B 5.0
 #define NS_PER_S  1000000000
 //#define SLAVE_ADDR 0x8
@@ -192,6 +192,8 @@ int task_speed()
     return 0;
 }
 
+
+
 //-------------------------------------
 //-  Function: task_slope
 //-------------------------------------
@@ -225,6 +227,8 @@ int task_slope()
     if (0 == strcmp(answer, "SLP:  UP\n")) displaySlope(1);
     return 0;
 }
+
+
 
 //-------------------------------------
 // PLAN 1: A partir de los datos recibidos determina si activar o no el freno ( en funcion de la velocidad y la cuesta)
@@ -269,6 +273,7 @@ int task_brake()
 }
 
 
+
 //-------------------------------------
 // PLAN 2 : Se activa o desactiva el freno en modo de parada en funcion de los datos recibidos
 //-------------------------------------
@@ -309,6 +314,10 @@ int task_brake_B()
     return 0;
     //dispalyBrake(int brake);
 }
+
+
+
+
 //-------------------------------------
 // PLAN 1: A partir de los datos recibidos determina si activar o no el acelerador (en funcion de la velocidad y la cuesta)
 //-------------------------------------
@@ -350,6 +359,8 @@ int task_gas()
     return 0; 
     //displayGas(int gas);
 }
+
+
 
 //-------------------------------------
 // PLAN 2: En el modo de parada se activa o desactiva el acelerador en funcion de los datos recibidos 
@@ -393,6 +404,8 @@ int task_gas_B()
     return 0;
     //displayGas(int gas);
 }
+
+
 
 //-------------------------------------
 // A partir de los datos recibidos determina si girar o no el mezclador 
@@ -550,6 +563,10 @@ int task_lamp_B(){
 }
 
 
+//-------------------------------------
+// PLAN 2: En el modo de parada se activan los faros en el display 
+//-------------------------------------
+
 int task_dist(){
 	char request[MSG_LEN+1];
 	    char answer[MSG_LEN+1];
@@ -577,6 +594,11 @@ int task_dist(){
 	    }
 	    return 0;
 }
+
+
+//-------------------------------------
+// PLAN 3: 
+//-------------------------------------
 int task_move(){
 	char request[MSG_LEN+1];
 	    char answer[MSG_LEN+1];

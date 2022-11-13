@@ -91,10 +91,10 @@ int comm_server()
    }
 }
 
+
+
 // --------------------------------------
-// Function: speed_req
-// Intensidad del led en funcion de la velocidad
-// Calculamos velocidad  
+// Devolvemos la velocidad actual cuando recibimos la peticion 
 // --------------------------------------
 int speed_req()
 {
@@ -113,6 +113,10 @@ int speed_req()
 }
 
 
+
+// --------------------------------------
+// Funcion para calcular la velocidad 
+// --------------------------------------
 double calc_speed(){
    accel = gas * 0.5 - brake * 0.5 + 0.25 * (-slope);
    speed2 += accel * 0.2;
@@ -120,6 +124,8 @@ double calc_speed(){
    analogWrite(pin_speed, map(speed2, 40, 70, 0, 255));
    return speed2; 
 }
+
+
 
 // --------------------------------------
 // Se lee la pendiente que viene indicada por el switch de tres posisiciones y se responde cuando se recibe la peticion
@@ -148,6 +154,7 @@ int slope_req(){
   
 
 }
+
 
 
 // --------------------------------------
@@ -231,6 +238,8 @@ void setup()
    pinMode(pin_switch_2, INPUT_PULLUP); // Palanca slope
    time_start = millis();
 }
+
+
 
 // --------------------------------------
 // Function: loop
