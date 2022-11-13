@@ -5,11 +5,9 @@
 #include <stdio.h>
 #include <Wire.h>
 
-
 // --------------------------------------
 // Global Constants
 // --------------------------------------
-
 #define MESSAGE_SIZE 9
 
 // --------------------------------------
@@ -31,6 +29,10 @@ unsigned long time_start;
 unsigned long time_end; 
 unsigned long time_sleep; 
 unsigned long MAX_TIME = (unsigned long) -1;
+
+// --------------------------------------
+// PINS
+// --------------------------------------
 int pin_gas = 13 ;
 int pin_brake = 12;
 int pin_mix = 11;
@@ -173,8 +175,6 @@ int lam_req(){
 
 
 
-
-
 // --------------------------------------
 // Se lee la pendiente y se responde
 // --------------------------------------
@@ -286,8 +286,9 @@ void setup()
    pinMode(pin_speed, OUTPUT); // Pin velocidad 
    pinMode(pin_switch_1, INPUT_PULLUP); // Pin switch 3 posiciones 
    pinMode(pin_switch_2, INPUT_PULLUP); // Pin switch 3 posiciones 
-   time_start = millis();
+   time_start = millis(); // Primer tiempo de inicio 
 }
+
 
 
 // --------------------------------------

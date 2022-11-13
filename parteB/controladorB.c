@@ -121,7 +121,6 @@ void time_diff(struct timespec end,
 }
 
 // Function: addTime
-
 void time_add(struct timespec end, 
              struct timespec start,
              struct timespec *add)

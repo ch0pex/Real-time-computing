@@ -43,9 +43,7 @@ int slope = 0;
 double distancia = 0;
 int lit = 0.0;
 bool lam = false;
-
 struct timespec time_msg = {0,400000000};
-
 int fd_serie = -1;
 
 //-------------------------------------
@@ -109,7 +107,6 @@ double get_Clock()
 
 
 //Function: diffTime
-
 void time_diff(struct timespec end, 
               struct timespec start,
               struct timespec *diff)
@@ -262,20 +259,19 @@ int task_brake()
         simulator(request, answer);
 #endif
     }
-    //
+
     if (0 == strcmp(answer, "BRK:  OK\n")) {
         // Confirmacion de arduino, se cambia el estado del freno en el display
         brake = !brake;
         displayBrake(brake);
     }
     return 0; 
-    //dispalyBrake(int brake);
 }
 
 
 
 //-------------------------------------
-// PLAN 2 : Se activa o desactiva el freno en modo de parada en funcion de los datos recibidos
+// (PLAN 2) Se activa o desactiva el freno en modo de parada en funcion de los datos recibidos
 //-------------------------------------
 int task_brake_B() 
 {
@@ -317,9 +313,8 @@ int task_brake_B()
 
 
 
-
 //-------------------------------------
-// PLAN 1: A partir de los datos recibidos determina si activar o no el acelerador (en funcion de la velocidad y la cuesta)
+// (PLAN 1) A partir de los datos recibidos determina si activar o no el acelerador (en funcion de la velocidad y la cuesta)
 //-------------------------------------
 int task_gas()
 {
@@ -363,9 +358,8 @@ int task_gas()
 
 
 //-------------------------------------
-// PLAN 2: En el modo de parada se activa o desactiva el acelerador en funcion de los datos recibidos 
+// (PLAN 2) En el modo de parada se activa o desactiva el acelerador en funcion de los datos recibidos 
 //-------------------------------------
-
 int task_gas_B()
 {
     char request[MSG_LEN+1];
@@ -490,8 +484,9 @@ int task_lit()
 }
 
 
+
 //-------------------------------------
-// PLAN 1: A partir de los datos recibidos determina si encender o no los faros 
+// (PLAN 1) A partir de los datos recibidos determina si encender o no los faros 
 //-------------------------------------
 int task_lamp(){
     char request[MSG_LEN+1];
@@ -499,11 +494,11 @@ int task_lamp(){
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
     if(lit <= 50 && lam == false){
-             //activar acelerador
-            strcpy(request, "LAM: SET\n");
-        }
+        //activar faros
+        strcpy(request, "LAM: SET\n");
+    }
     if (lit > 51 && lam == true){
-        //desactivar acelerador
+        //desactivar faros
         strcpy(request, "LAM: CLR\n");
     }
 
@@ -528,8 +523,10 @@ int task_lamp(){
 
 }
 
+
+
 //-------------------------------------
-// PLAN 2: En el modo de parada se activan los faros en el display 
+// (PLAN 2) En el modo de parada se activan los faros en el display 
 //-------------------------------------
 int task_lamp_B(){
     char request[MSG_LEN+1];
@@ -563,20 +560,20 @@ int task_lamp_B(){
 }
 
 
-//-------------------------------------
-// PLAN 2: En el modo de parada se activan los faros en el display 
-//-------------------------------------
 
+//-------------------------------------
+// (PLAN 2) En el modo de parada se activan los faros en el display 
+//-------------------------------------
 int task_dist(){
 	char request[MSG_LEN+1];
-	    char answer[MSG_LEN+1];
+    char answer[MSG_LEN+1];
 
-	    //clear request and answer
-	    memset(request, '\0', MSG_LEN+1);
-	    memset(answer, '\0', MSG_LEN+1);
+    //clear request and answer
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
 
-	    // Se realiza la peticicion de lectura de distancia a la parada 
-	    strcpy(request, "DS:  REQ\n");
+    // Se realiza la peticicion de lectura de distancia a la parada 
+    strcpy(request, "DS:  REQ\n");
 
 	#if defined(ARDUINO)
 	    // use UART serial module
@@ -588,51 +585,58 @@ int task_dist(){
 	    simulator(request, answer);
 	#endif
 
-	    if (1 == sscanf (answer, "DS:%le\n", &distancia)){
-            // Arduino devuelve la distancia a la parada y se muestra por el display 
-	        displayDistance(distancia);
-	    }
-	    return 0;
+    if (1 == sscanf (answer, "DS:%le\n", &distancia)){
+        // Arduino devuelve la distancia a la parada y se muestra por el display 
+        displayDistance(distancia);
+    }
+    return 0;
 }
 
 
+
 //-------------------------------------
-// PLAN 3: 
+// (PLAN 3) Peticion de lectura del estado del movimiento de la carretilla 
 //-------------------------------------
 int task_move(){
 	char request[MSG_LEN+1];
-	    char answer[MSG_LEN+1];
+    char answer[MSG_LEN+1];
 
 
-	    //clear request and answer
-	    memset(request, '\0', MSG_LEN+1);
-	    memset(answer, '\0', MSG_LEN+1);
+    //clear request and answer
+    memset(request, '\0', MSG_LEN+1);
+    memset(answer, '\0', MSG_LEN+1);
 
-	    // request speed
-	    strcpy(request, "STP: REQ\n");
+    // Peticion de lectura del estado del movimiento de la carretilla
+    strcpy(request, "STP: REQ\n");
 
-	#if defined(ARDUINO)
-	    // use UART serial module
-	    write(fd_serie, request, MSG_LEN);
-	    nanosleep(&time_msg, NULL);
-	    read_msg(fd_serie, answer, MSG_LEN);
-	#else
+#if defined(ARDUINO)
+    // use UART serial module
+    write(fd_serie, request, MSG_LEN);
+    nanosleep(&time_msg, NULL);
+    read_msg(fd_serie, answer, MSG_LEN);
+#else
 	    //Use the simulator
-	    simulator(request, answer);
-	#endif
+    simulator(request, answer);
+#endif
 
-	    if (0 == strcmp(answer, "STP:  GO\n")){
-            displayStop(0);
-            return 1;
-	    }
-	    else if (0 == strcmp(answer, "STP:STOP\n")){
-            displayStop(1);
-            return 0;
-	    }
-	    return 0;
+    if (0 == strcmp(answer, "STP:  GO\n")){
+        // Arduino devuelve que la carretilla esta en movimiento y se muestra por el display
+        displayStop(0);
+        return 1;
+    }
+    else if (0 == strcmp(answer, "STP:STOP\n")){
+        // Arduino devuelve que la carretilla esta parada y se muestra por el display
+        displayStop(1);
+        return 0;
+    }
+	return 0;
 }
 
 
+
+// --------------------------------------
+// PLAN 1: Modo de funcionamiento normal  
+// --------------------------------------
 int plan1(){
     //static clock_t tiempo_inicio, tiempo_final;
     struct timespec cs_time = {5,0};
@@ -676,6 +680,10 @@ int plan1(){
 }
 
 
+
+// --------------------------------------
+// PLAN 2: Modo de frenado
+// --------------------------------------
 int plan2(){
     //static clock_t tiempo_inicio, tiempo_final;
     struct timespec cs_time = {5,0};
@@ -685,45 +693,46 @@ int plan2(){
     int cs = 0;
     clock_gettime(CLOCK_REALTIME, &start_time);
     while(1){
-
+        // Tareas ejecutadas en todos los ciclos secundarios 
         task_speed();
         task_brake_B();
         task_gas_B();
-        if (cs == 0) {
+        if (cs == 0) { 
+            // Tareas ejecutadas solo en el primer ciclo secundario
         	task_slope();
-
             task_dist();
         }
         else if (cs == 1){
+            // Tareas ejecutadas solo en el segundo ciclo secundario
         	task_lamp_B();
             task_mixer();
-               }
+        }
         cs = (cs + 1) % 2;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
 
-        if(time_comp(cs_time,diff_time) == -1){
-            printf("Error");
+        if(time_comp(cs_time, diff_time) == -1){
             exit(-1);
         }
-        if(distancia==0 && speed<=10){
-
+        if(distancia == 0 && speed <= 10){
         	return 3;
         }
-        /*
-        if(distancia==0 && speed>10){
 
-            return 1;
-                }
-        */
-        if(distancia>11000){
+        if(distancia > 11000){
         	return 1;
         }
         nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }
 }
+
+
+
+
+// --------------------------------------
+// PLAN 3: Modo de parada 
+// --------------------------------------
 int plan3(){
     //static clock_t tiempo_inicio, tiempo_final;
     struct timespec cs_time = {5,0};
@@ -733,30 +742,34 @@ int plan3(){
     int cs = 0;
     clock_gettime(CLOCK_REALTIME, &start_time);
     while(1){
-
-
+        // Tareas ejecutadas en todos los ciclos secundarios 
         task_lamp_B();
         if (cs == 0) {
+            // Tareas ejecutadas solo en el primer ciclo secundario
         	task_mixer();
         }
         if(task_move() == 1){
-        	return 1;
+            // Si la carretilla esta en movimiento se cambia al modo de funcionamiento normal
+        	return 1; 
         }
         cs = (cs + 1) % 2;
+
+        // Se calcula el tiempo que se debe dormir 
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
-
         if(time_comp(cs_time,diff_time) == -1){
-            printf("Error");
             exit(-1);
         }
         nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }
 }
+
+
+
 //-------------------------------------
-//-  Function: controller
+//  Function: controller
 //-------------------------------------
 void *controller(void *arg)
 {
@@ -777,6 +790,8 @@ void *controller(void *arg)
     	}
     }
 }
+
+
 
 //-------------------------------------
 //-  Function: Init

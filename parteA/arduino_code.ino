@@ -30,7 +30,9 @@ unsigned long time_end;
 unsigned long time_sleep; 
 unsigned long MAX_TIME = (unsigned long) -1;
 
+// --------------------------------------
 // PINS
+// --------------------------------------
 int pin_gas = 13 ;
 int pin_brake = 12;
 int pin_mix = 11;
