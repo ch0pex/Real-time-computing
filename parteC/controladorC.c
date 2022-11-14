@@ -665,10 +665,10 @@ int plan1(){
         // Se calcula el tiempo que se debe dormir 
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
-        time_diff(cs_time,diff_time, &diff_time);
-        if(time_comp(cs_time,diff_time) == -1){
+        if(time_comp(cs_time, diff_time) == -1){
             exit(-1);
         }
+        time_diff(cs_time,diff_time, &diff_time);
 
         if(distancia<11000){
             // Si la distancia es menor de 11000 se cambia al modo de parada 
@@ -711,11 +711,12 @@ int plan2(){
         // Se calcula el tiempo que se debe dormir
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
-        time_diff(cs_time,diff_time, &diff_time);
-
         if(time_comp(cs_time, diff_time) == -1){
             exit(-1);
         }
+        time_diff(cs_time,diff_time, &diff_time);
+
+        
         if(distancia == 0 && speed <= 10){
             // Si la distancia es 0 y la velocidad es menor de 10 se cambia al modo de parada
         	return 3;
@@ -760,10 +761,11 @@ int plan3(){
         // Se calcula el tiempo que se debe dormir 
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
-        time_diff(cs_time,diff_time, &diff_time);
-        if(time_comp(cs_time,diff_time) == -1){
+        if(time_comp(cs_time, diff_time) == -1){
             exit(-1);
         }
+        time_diff(cs_time,diff_time, &diff_time);
+
         nanosleep(&diff_time, NULL);
         time_add(start_time,cs_time, &start_time);
     }

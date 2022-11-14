@@ -381,11 +381,11 @@ void plan1(){
         cs = (cs + 1) % 3;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
-        time_diff(cs_time,diff_time, &diff_time);
-
         if(time_comp(cs_time,diff_time) == -1){ // Tiempo de ejecucion mayor al tiempo de ciclo secundario
             exit(-1);
         }
+        time_diff(cs_time,diff_time, &diff_time);
+
         nanosleep(&diff_time, NULL); // Se duerme el tiempo correspondiente
         time_add(start_time,cs_time, &start_time); // Suma tiempo teorico
     }
