@@ -589,6 +589,7 @@ int plan2(){
    else if(distance<=0 && speed2>10){
      /* Si la carretilla esta en el punto de parada y su velocidad es mayor de 10ms la parada a fallado
        y se cambia al modo de seleccion de distancia */
+     distance=99999;
      return 1;
    }
    return 2;
