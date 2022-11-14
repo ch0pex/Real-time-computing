@@ -521,7 +521,7 @@ int plan1(){
    // Ejecucion de tareas del plan de ejecucion (solo un CS)
    comm_server();
    emergency_req();
-   speed_req() 
+   speed_req();
    gas_req();
    brake_req();
    mix_req();
