@@ -139,7 +139,7 @@ double calc_speed(){
 int speed_req()
 {
    speed2 = calc_speed();
-   if ( request_received && !requested_answered && (0 == strcmp("SPD: REQ\n",request)) ) {t
+   if ( request_received && !requested_answered && (0 == strcmp("SPD: REQ\n",request)) ) {
       char num_str[5];
       dtostrf(speed2,4,1,num_str);
       sprintf(answer,"SPD:%s\n",num_str);
