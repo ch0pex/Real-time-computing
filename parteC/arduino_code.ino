@@ -111,6 +111,7 @@ int comm_server()
 }
 
 
+
 // --------------------------------------
 // Se calcula la velocidad y se regula la intensidad del led en funcion a esta 
 // --------------------------------------
@@ -130,10 +131,11 @@ double calc_speed(){
    return speed2; 
 }
 
+
+
 // --------------------------------------
 // Se responde al servidor con la velocidad actual de la carretilla  
 // --------------------------------------
-
 int speed_req()
 {
    speed2 = calc_speed();
@@ -233,14 +235,14 @@ int slope_req(){
 int brake_req(){
    
    if(request_received && !requested_answered && 0 == strcmp("BRK: SET\n",request)){
-    // Se activa el freno (encender led)
+      // Se activa el freno (encender led)
       brake=1;
       digitalWrite(pin_brake, HIGH);
       sprintf(answer,"BRK:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("BRK: CLR\n",request)){
-    // Se desactiva el freno (apagar led)
+      // Se desactiva el freno (apagar led)
       brake=0;
       digitalWrite(pin_brake, LOW);
       sprintf(answer,"BRK:  OK\n");
@@ -262,7 +264,7 @@ int gas_req(){
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("GAS: CLR\n",request)){
-    // Se desactiva el freno (encender led)
+    // Se desactiva el acelerador (apagar led)
       gas = 0;
       digitalWrite(pin_gas, LOW);
       sprintf(answer,"GAS:  OK\n");
@@ -277,13 +279,13 @@ int gas_req(){
 //--------------------------------------- 
 int mix_req(){
    if(request_received && !requested_answered && 0 == strcmp("MIX: SET\n",request)){
-      //activar mix
+      // Se activa el mixer (encender led)
       digitalWrite(pin_mix, HIGH);
       sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
    }
    else if (request_received && !requested_answered && 0 == strcmp("MIX: CLR\n",request)){
-      //desactivar mix 
+      // Se desactiva el mixer (encender led) 
       digitalWrite(pin_mix, LOW);
       sprintf(answer,"MIX:  OK\n");
       requested_answered = true;
@@ -621,7 +623,6 @@ int plan3(){
    }
    else {
       time_sleep = 200 - (time_end - time_start);
-      
    }
    if (time_sleep <= 10 && time_sleep > 0){
       delayMicroseconds(time_sleep * 1000);

@@ -729,7 +729,7 @@ int task_emergency(){
     memset(request, '\0', MSG_LEN+1);
     memset(answer, '\0', MSG_LEN+1);
     if(emergency == false){
-        //activar acelerador
+        //activar emergencia
         strcpy(request, "ERR: SET\n");
     }
 
@@ -744,8 +744,8 @@ int task_emergency(){
         simulator(request, answer);
 #endif
     }
-    // display slope
     if (0 == strcmp(answer, "ERR:  OK\n")){
+        // Confirmacion del arduino, se cambia el estado de la emergencia  
         emergency = true;
 
     }
@@ -788,7 +788,8 @@ int plan1(){
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         if(time_comp(cs_time,diff_time) == -1){
-             return 4;
+            //Si el tiempo de ejecucion es mayor al tiempo de ciclo secundario, se entra en el modo de emergencia
+            return 4;
         }
         time_diff(cs_time,diff_time, &diff_time);
 
@@ -830,19 +831,23 @@ int plan2(){
             task_mixer();
                }
         cs = (cs + 1) % 2;
+        // Se calcula el tiempo que se debe dormir
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         if(time_comp(cs_time,diff_time) == -1){
-             return 4;
+            //Si el tiempo de ejecucion es mayor al tiempo de ciclo secundario, se entra en el modo de emergencia
+            return 4;
         }
         time_diff(cs_time,diff_time, &diff_time);
 
 
         if(distancia==0 && speed<=10){
+            // Si la distancia es 0 y la velocidad es menor de 10 se cambia al modo de parada
         	return 3;
         }
 
         if(distancia>11000){
+            // Si la distancia es mayor de 11000 se cambia al modo de funcionamiento normal
         	return 1;
         }
         nanosleep(&diff_time, NULL);
@@ -863,24 +868,25 @@ int plan3(){
     struct timespec diff_time;
     int cs = 0;
     clock_gettime(CLOCK_REALTIME, &start_time);
-    while(1){
-
-
+    while(1){ // Cada iteracion del bucle corresponde a un ciclo secundario del plan de ejecucion
+        //Tarea ejecutadas en todos los ciclos secundarios
         task_lamp_B();
         if (cs == 0) {
+            // Tareas ejecutadas solo en el primer ciclo secundario
         	task_mixer();
-
-
         }
         if(task_move() == 1){
+            // Si el movimiento es 1 se cambia al modo de funcionamiento normal
         	return 1;
         }
+        // Se calcula el tiempo que se debe dormir
         cs = (cs + 1) % 2;
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
 
         if(time_comp(cs_time,diff_time) == -1){
+            // Si el tiempo de ejecucion es mayor al tiempo de ciclo secundario, se entra en el modo de emergencia
             return 4;
         }
         nanosleep(&diff_time, NULL);
@@ -901,21 +907,23 @@ int plan4(){
     struct timespec diff_time;
     int cs = 0;
     clock_gettime(CLOCK_REALTIME, &start_time);
-    while(1){
-
-
+    while(1){ // Cada iteracion del bucle corresponde a un ciclo secundario del plan de ejecucion
+        //Tarea ejecutadas en todos los ciclos secundarios
         task_lamp_B();
         if (cs == 0) {
+            // Tareas ejecutadas solo en el primer ciclo secundario
         	task_speed();
         	task_gas_C();
         	task_slope();
         }
         if (cs == 1) {
+            // Tareas ejecutadas solo en el segundo ciclo secundario
             task_mixer();
            	task_brake_C();
            	task_emergency();
-                }
+        }
         cs = (cs + 1) % 2;
+        // Se calcula el tiempo que se debe dormir
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         if(time_comp(cs_time,diff_time) == -1){
@@ -937,21 +945,21 @@ int plan4(){
 void *controller(void *arg)
 {
 	int plan = 1;
-    while(1) {
-
+    while(1) { 
+        // Se ejecuta en bucle el plan de ejecucion correspondiente
     	switch (plan)
     	{
 			case 1:
-				plan = plan1();
+				plan = plan1(); // Modo de funcionamiento normal
 				break;
 			case 2:
-				plan = plan2();
+				plan = plan2(); // Modo de frenado
 				break;
 			case 3:
-				plan = plan3();
+				plan = plan3(); // Modo de parada
 				break;
 			default:
-				plan = plan4();
+				plan = plan4(); // Modo de emergencia
 				break;
     	}
     }

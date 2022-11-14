@@ -708,6 +708,7 @@ int plan2(){
             task_mixer();
         }
         cs = (cs + 1) % 2;
+        // Se calcula el tiempo que se debe dormir
         clock_gettime(CLOCK_REALTIME, &end_time);
         time_diff(end_time,start_time, &diff_time);
         time_diff(cs_time,diff_time, &diff_time);
@@ -716,10 +717,12 @@ int plan2(){
             exit(-1);
         }
         if(distancia == 0 && speed <= 10){
+            // Si la distancia es 0 y la velocidad es menor de 10 se cambia al modo de parada
         	return 3;
         }
 
-        if(distancia > 11000){
+        if(distancia > 11000){ 
+            // Si la distnacia es superior a 11000 se cambia al modo de funcionamiento normal
         	return 1;
         }
         nanosleep(&diff_time, NULL);
@@ -775,17 +778,17 @@ void *controller(void *arg)
 {
 	int plan = 1;
     while(1) {
-
+        // Se ejecuta el plan de ejecucion correspondiente
     	switch (plan)
     	{
 			case 1:
-				plan = plan1();
+				plan = plan1(); // Modo de funcionamiento normal
 				break;
 			case 2:
-				plan = plan2();
+				plan = plan2(); // Modo de frenado
 				break;
 			default:
-				plan = plan3();
+				plan = plan3(); // Modo de parada
 				break;
     	}
     }
