@@ -1,1 +1,1 @@
-# Real time system simulation in C and arduino
+# Real time computing in C and arduino
